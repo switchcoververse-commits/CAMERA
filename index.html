@@ -30,17 +30,62 @@
         <button class="btn-finish" id="finish">PROCESAR ORDEN</button>
     </div>
 
-    <script>
-       navigator.mediaDevices.getUserMedia({ 
-            video: true 
-        })
-        .then(stream => {
-            video.srcObject = stream;
-            status.innerText = "¡CONECTADO!";
-        })
-        .catch(err => {
-            status.innerText = "ERROR DE ACCESO: " + err.name;
-        });
-    </script>
+   <script>
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas'); // Canvas oculto para fotos
+    const status = document.getElementById('status');
+    const frame = document.getElementById('frame');
+    const captureBtn = document.getElementById('capture');
+    const finishBtn = document.getElementById('finish');
+    
+    let sessionPhotos = [];
+
+    // 1. Iniciar Cámara
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(stream => { video.srcObject = stream; })
+    .catch(err => { status.innerText = "ERROR DE CÁMARA"; });
+
+    // 2. NIVEL DE BURBUJA (Marco Rojo -> Verde)
+    // En iPhone, esto requiere que muevas el móvil un poco para activarse
+    window.addEventListener('deviceorientation', (event) => {
+        const beta = Math.abs(event.beta); // Inclinación adelante/atrás
+        const gamma = Math.abs(event.gamma); // Inclinación lateral
+
+        // Detectamos si el móvil está vertical frente a la pared
+        if (beta > 75 && beta < 105 && Math.abs(gamma) < 5) {
+            frame.style.borderColor = "#00ff00"; // VERDE
+            status.innerText = "NIVELADO: LISTO";
+            status.style.color = "#00ff00";
+        } else {
+            frame.style.borderColor = "#ff0000"; // ROJO
+            status.innerText = "AJUSTA EL NIVEL";
+            status.style.color = "white";
+        }
+    });
+
+    // 3. CAPTURAR FOTOS (Múltiples)
+    captureBtn.addEventListener('click', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        sessionPhotos.push(canvas.toDataURL('image/jpeg'));
+        status.innerText = `FOTO ${sessionPhotos.length} CAPTURADA`;
+        
+        // Mostrar botón de terminar si hay al menos una foto
+        finishBtn.style.display = "block";
+
+        // Flash visual
+        video.style.opacity = "0.5";
+        setTimeout(() => { video.style.opacity = "1"; }, 100);
+    });
+
+    // 4. FINALIZAR Y ENVIAR
+    finishBtn.addEventListener('click', () => {
+        // Guardamos las fotos en la memoria del navegador para el formulario
+        localStorage.setItem('fotosEscaneadas', JSON.stringify(sessionPhotos));
+        window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview";
+    });
+</script>
 </body>
 </html>
