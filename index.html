@@ -3,83 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BRUTAL SCANNER - Precision Engineering</title>
     <style>
-        body { margin: 0; background: #000; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .camera-container { position: relative; width: 100%; max-width: 500px; height: 100%; display: flex; align-items: center; justify-content: center; }
-        video, canvas { width: 100%; height: auto; object-fit: cover; }
+        body { margin: 0; background: #000; font-family: 'Inter', -apple-system, sans-serif; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Narrower Vertical Frame to force more wall context */
-        .overlay {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 35%; height: 50%; /* Smaller rectangle = More wall visible */
-            border: 3px solid #00c3ff;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5); /* Semi-transparent shadow */
-            pointer-events: none;
-            z-index: 10;
-            border-radius: 10px;
+        /* Header Técnico */
+        .header { height: 10%; background: #000; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #00d4ff; z-index: 100; }
+        .header-text { font-size: 12px; font-weight: 800; letter-spacing: 2px; color: #00d4ff; text-transform: uppercase; }
+
+        /* Visor de Escaneo */
+        .viewport { position: relative; width: 100%; height: 70%; display: flex; align-items: center; justify-content: center; background: #050505; }
+        video { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+        
+        /* El Marco de Ingeniería (Ajustado para Multi-Gang) */
+        .scanner-frame {
+            position: relative;
+            width: 70%; height: 60%; 
+            border: 2px solid #00d4ff;
+            border-radius: 2px;
+            box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.75);
+            z-index: 50;
+        }
+        /* Cruces de precisión en las esquinas */
+        .scanner-frame::before { content: ''; position: absolute; top: -10px; left: -10px; width: 20px; height: 20px; border-top: 4px solid #fff; border-left: 4px solid #fff; }
+        .scanner-frame::after { content: ''; position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; border-bottom: 4px solid #fff; border-right: 4px solid #fff; }
+
+        /* Panel de Control Inferior */
+        .footer { height: 20%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; border-top: 1px solid #222; z-index: 100; }
+        
+        .shutter-group { display: flex; align-items: center; justify-content: center; gap: 30px; width: 100%; }
+        
+        .shutter-btn { width: 80px; height: 80px; background: #fff; border-radius: 50%; border: 6px solid #00d4ff; cursor: pointer; transition: 0.2s; }
+        .shutter-btn:active { transform: scale(0.85); background: #00d4ff; }
+        
+        .finish-btn { 
+            background: #00d4ff; color: #000; border: none; padding: 16px 32px; 
+            border-radius: 4px; font-weight: 900; font-size: 14px; display: none;
+            text-transform: uppercase; cursor: pointer;
         }
 
-        /* Instructions Overlay */
-        .instructions {
-            position: absolute; top: 5%; width: 90%;
-            color: #fff; text-align: center; z-index: 20;
-            font-size: 13px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px;
-            line-height: 1.4;
-        }
-
-        button {
-            position: absolute; bottom: 30px; left: 50%;
-            transform: translateX(-50%);
-            padding: 18px 40px; background: #00c3ff; color: #fff;
-            border: none; border-radius: 50px; font-size: 16px; font-weight: bold;
-            z-index: 20; cursor: pointer; box-shadow: 0 4px 15px rgba(0,195,255,0.4);
-            text-transform: uppercase;
-        }
-        #canvas { display: none; }
+        .status-bar { font-size: 10px; color: #555; margin-bottom: 10px; font-family: monospace; }
+        .status-bar.active { color: #00d4ff; }
     </style>
 </head>
 <body>
 
-    <div class="instructions">
-        <strong>IMPORTANT:</strong> Center the outlet in the blue box.<br>
-        Make sure you can see the <strong>wall around it</strong>.<br>
-        Avoid shadows and use bright lights.
+    <div class="header">
+        <div class="header-text">Universal Device Scanner v1.0</div>
     </div>
 
-    <div class="camera-container">
+    <div class="viewport">
         <video id="video" autoplay playsinline></video>
-        <div id="guide" class="overlay"></div>
-        <canvas id="canvas"></canvas>
-        <button id="snap">Take Technical Photo</button>
+        <div class="scanner-frame"></div>
     </div>
+
+    <div class="footer">
+        <div id="status" class="status-bar">READY TO SCAN...</div>
+        <div class="shutter-group">
+            <div id="capture" class="shutter-btn"></div>
+            <button id="finish" class="finish-btn">Process Order</button>
+        </div>
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const snap = document.getElementById('snap');
+        const captureBtn = document.getElementById('capture');
+        const finishBtn = document.getElementById('finish');
+        const status = document.getElementById('status');
+        
+        let sessionPhotos = [];
 
-        navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
-            audio: false 
-        }).then(stream => { video.srcObject = stream; })
-          .catch(err => alert("Error: Camera access is required for the measurement."));
+        // Configuración BRUTAL: Máxima resolución y enfoque manual de proximidad
+        const constraints = {
+            video: { 
+                facingMode: "environment", 
+                width: { ideal: 4096 }, 
+                height: { ideal: 2160 },
+                frameRate: { ideal: 30 }
+            } 
+        };
 
-        snap.addEventListener('click', () => {
-            if (snap.innerText.includes("RETAKE")) { location.reload(); return; }
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => alert("Error: Camera high-res mode failed. Check permissions."));
 
-            const context = canvas.getContext('2d');
+        captureBtn.addEventListener('click', () => {
+            const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            video.style.display = 'none';
-            document.getElementById('guide').style.display = 'none';
-            document.querySelector('.instructions').style.display = 'none';
-            canvas.style.display = 'block';
-            snap.innerText = "✓ PHOTO SAVED - TAP TO RETAKE";
-            snap.style.background = "#ffb300";
+            sessionPhotos.push(canvas.toDataURL('image/jpeg', 1.0)); // Calidad 100%
+            
+            status.classList.add('active');
+            status.innerText = `SCAN CAPTURED: DEVICE ${sessionPhotos.length}`;
+            finishBtn.style.display = "block";
+
+            // Efecto de obturador técnico
+            document.body.style.backgroundColor = "#fff";
+            setTimeout(() => document.body.style.backgroundColor = "#000", 40);
+        });
+
+        finishBtn.addEventListener('click', () => {
+            // Guardamos localmente para no perderlas
+            localStorage.setItem('scannedPhotos', JSON.stringify(sessionPhotos));
+            // Redirigimos al formulario de datos y pago
+            window.location.href = "TU_URL_DE_GOOGLE_FORM_AQUÍ"; 
         });
     </script>
 </body>
