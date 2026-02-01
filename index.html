@@ -89,8 +89,20 @@
         navigator.mediaDevices.getUserMedia(constraints)
             .then(stream => { video.srcObject = stream; })
             .catch(err => alert("Error: Camera high-res mode failed. Check permissions."));
-
-        captureBtn.addEventListener('click', () => {
+// Sistema de Nivel de Burbuja para fotos perfectas
+window.addEventListener("deviceorientation", (event) => {
+    const beta = Math.abs(event.beta); // Inclinación adelante/atrás
+    const gamma = Math.abs(event.gamma); // Inclinación izquierda/derecha
+    
+    // Si el móvil está más o menos recto (vertical)
+    if (beta > 80 && beta < 100 && gamma < 10) {
+        document.querySelector('.scanner-frame').style.borderColor = "#00ff00"; // VERDE: Nivelado
+        status.innerText = "LEVEL OK: SCAN NOW";
+    } else {
+        document.querySelector('.scanner-frame').style.borderColor = "#ff0000"; // ROJO: Inclinado
+        status.innerText = "HOLD PHONE VERTICAL & STRAIGHT";
+    }
+}, true);        captureBtn.addEventListener('click', () => {
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
