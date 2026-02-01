@@ -31,19 +31,15 @@
     </div>
 
     <script>
-        const video = document.getElementById('video');
-        const status = document.getElementById('status');
-
-        // Solicitar cámara de la forma más compatible posible
-        navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
+       navigator.mediaDevices.getUserMedia({ 
+            video: true 
         })
         .then(stream => {
             video.srcObject = stream;
-            status.innerText = "CÁMARA OK - AJUSTA NIVEL";
+            status.innerText = "¡CONECTADO!";
         })
         .catch(err => {
-            status.innerText = "ERROR: Revisa los permisos de cámara en tu navegador";
+            status.innerText = "ERROR DE ACCESO: " + err.name;
         });
     </script>
 </body>
