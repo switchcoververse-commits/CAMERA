@@ -1,46 +1,87 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #000; }
-        video, canvas { width: 100%; max-width: 500px; border-radius: 8px; }
-        button { margin-top: 10px; padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        body { margin: 0; background: #000; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .camera-container { position: relative; width: 100%; max-width: 500px; height: 100%; display: flex; align-items: center; }
+        video, canvas { width: 100%; height: auto; border-radius: 0px; }
+        
+        /* High Precision Overlay */
+        .overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; height: 40%; 
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+            z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Center Crosshair */
+        .overlay::before {
+            content: ""; width: 20px; height: 2px; background: #00ff00; position: absolute;
+        }
+        .overlay::after {
+            content: ""; width: 2px; height: 20px; background: #00ff00; position: absolute;
+        }
+
+        .label {
+            position: absolute; top: -40px; width: 100%;
+            color: #00ff00; font-size: 14px; font-weight: bold; text-align: center;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        button {
+            position: absolute; bottom: 40px; left: 50%;
+            transform: translateX(-50%);
+            padding: 18px 36px; background: #00ff00; color: #000;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: bold;
+            z-index: 20; cursor: pointer; text-transform: uppercase;
+        }
         #canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas"></canvas>
-    <button id="snap">📸 Take Photo</button>
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <div id="guide" class="overlay">
+            <div class="label">Center Outlet & Keep Parallel to Wall</div>
+        </div>
+        <canvas id="canvas"></canvas>
+        <button id="snap">Capture High-Res Photo</button>
+    </div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const snap = document.getElementById('snap');
+        const guide = document.getElementById('guide');
 
-        // Acceder a la cámara
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                alert("Error accediendo a la cámara. Asegúrate de dar permisos.");
-            });
+        // Force High Resolution
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 4096 }, height: { ideal: 2160 } }, 
+            audio: false 
+        }).then(stream => { video.srcObject = stream; })
+          .catch(err => alert("Error: Camera access required for technical survey."));
 
-        // Capturar foto
         snap.addEventListener('click', () => {
+            if (snap.innerText.includes("RETAKE")) { location.reload(); return; }
+
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             video.style.display = 'none';
+            guide.style.display = 'none';
             canvas.style.display = 'block';
-            snap.innerText = "✅ Photo Captured";
-            snap.style.background = "#28a745";
+            snap.innerText = "✓ Photo Captured - Tap to Retake";
+            snap.style.background = "#fff";
         });
     </script>
 </body>
