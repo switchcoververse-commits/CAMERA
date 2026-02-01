@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Pro V2.5</title>
+    <title>Scanner Pro V2.6</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
         .viewport { position: relative; width: 100vw; height: 70vh; background: #111; }
@@ -14,7 +14,7 @@
             z-index: 10; pointer-events: none; transition: all 0.3s ease;
         }
         .controls { height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; padding: 10px; }
-        .status { margin-bottom: 15px; font-weight: bold; font-size: 15px; color: #00d4ff; text-transform: uppercase; letter-spacing: 1px; }
+        .status { margin-bottom: 15px; font-weight: bold; font-size: 15px; color: #00d4ff; text-transform: uppercase; letter-spacing: 1px; height: 20px; }
         .shutter-btn { width: 75px; height: 75px; background: white; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; }
         .btn-finish { 
             display: none; margin-top: 15px; background: #00d4ff; color: #000; border: none; 
@@ -68,7 +68,8 @@
                 const side = Math.abs(e.gamma);
                 if (tilt > 75 && tilt < 105 && side < 6) {
                     frame.style.borderColor = "#00ff00";
-                    status.innerText = photos.length > 0 ? "LEVEL OK - ADD ANOTHER?" : "LEVEL OK - READY TO SCAN";
+                    // Invitación sutil mientras está nivelado
+                    status.innerText = photos.length > 0 ? "LEVEL OK - SCAN ANOTHER?" : "LEVEL OK - READY TO SCAN";
                     status.style.color = "#00ff00";
                 } else {
                     frame.style.borderColor = "red";
@@ -84,8 +85,8 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             photos.push(canvas.toDataURL('image/jpeg', 0.8));
             
-            // Efecto invitación "Algo más?"
-            status.innerText = `OUTLET ${photos.length} SAVED. ANYTHING ELSE?`;
+            // LA PREGUNTA MAESTRA (Sin números)
+            status.innerText = "OUTLET SAVED. ANYTHING ELSE?";
             status.style.color = "#00ff00";
             finishBtn.style.display = "block";
             
