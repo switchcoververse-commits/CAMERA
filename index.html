@@ -81,57 +81,113 @@
         
         let sessionPhotos = [];
 
-        // Configuración BRUTAL: Máxima resolución y enfoque manual de proximidad
-        const constraints = {
-            video: { 
-                facingMode: "environment", 
-                width: { ideal: 4096 }, 
-                height: { ideal: 2160 },
-                frameRate: { ideal: 30 }
-            } 
-        };
+       <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Device Scanner V1.0</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; font-family: 'Courier New', monospace; overflow: hidden; color: #00d4ff; }
+        
+        .viewport { position: relative; width: 100vw; height: 80vh; background: #111; display: flex; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
-        navigator.mediaDevices.getUserMedia(constraints)
+        /* Marco de ingeniería ampliado */
+        .scanner-frame {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            height: 65%;
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            transition: border-color 0.3s ease;
+            pointer-events: none;
+        }
+
+        .footer { height: 20vh; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; }
+        .status-bar { font-size: 12px; margin-bottom: 15px; letter-spacing: 2px; text-transform: uppercase; }
+        
+        .shutter-group { display: flex; align-items: center; gap: 30px; }
+        .shutter-btn { width: 70px; height: 70px; background: #fff; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; }
+        .shutter-btn:active { transform: scale(0.9); }
+        
+        .finish-btn { 
+            display: none; 
+            background: #00d4ff; color: #000; border: none; 
+            padding: 12px 24px; font-weight: bold; border-radius: 5px; cursor: pointer; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="viewport">
+        <video id="video" autoplay playsinline></video>
+        <div class="scanner-frame"></div>
+    </div>
+
+    <div class="footer">
+        <div id="status" class="status-bar">ADJUST LEVEL TO SCAN</div>
+        <div class="shutter-group">
+            <div id="capture" class="shutter-btn"></div>
+            <button id="finish" class="finish-btn">PROCESS ORDER</button>
+        </div>
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('capture');
+        const finishBtn = document.getElementById('finish');
+        const status = document.getElementById('status');
+        const frame = document.querySelector('.scanner-frame');
+
+        let sessionPhotos = [];
+
+        // 1. Iniciar Cámara
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280, height: 720 } })
             .then(stream => { video.srcObject = stream; })
-            .catch(err => alert("Error: Camera high-res mode failed. Check permissions."));
-// Sistema de Nivel de Burbuja para fotos perfectas
-window.addEventListener("deviceorientation", (event) => {
-    const beta = Math.abs(event.beta); // Inclinación adelante/atrás
-    const gamma = Math.abs(event.gamma); // Inclinación izquierda/derecha
-    
-    // Si el móvil está más o menos recto (vertical)
-    if (beta > 80 && beta < 100 && gamma < 10) {
-        document.querySelector('.scanner-frame').style.borderColor = "#00ff00"; // VERDE: Nivelado
-        status.innerText = "LEVEL OK: SCAN NOW";
-    } else {
-        document.querySelector('.scanner-frame').style.borderColor = "#ff0000"; // ROJO: Inclinado
-        status.innerText = "HOLD PHONE VERTICAL & STRAIGHT";
-    }
-}, true);        captureBtn.addEventListener('click', () => {
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            sessionPhotos.push(canvas.toDataURL('image/jpeg', 1.0)); // Calidad 100%
-            
-            status.classList.add('active');
-            status.innerText = `SCAN CAPTURED: DEVICE ${sessionPhotos.length}`;
-            finishBtn.style.display = "block";
+            .catch(err => { status.innerText = "CAMERA ERROR"; });
 
-            // Efecto de obturador técnico
-            document.body.style.backgroundColor = "#fff";
-            setTimeout(() => document.body.style.backgroundColor = "#000", 40);
+        // 2. Nivel de Burbuja
+        window.addEventListener('deviceorientation', (event) => {
+            const beta = Math.abs(event.beta); 
+            const gamma = Math.abs(event.gamma);
+            if (beta > 75 && beta < 105 && Math.abs(gamma) < 5) {
+                frame.style.borderColor = "#00ff00"; // VERDE
+                status.innerText = "ALIGNED: READY";
+            } else {
+                frame.style.borderColor = "#ff0000"; // ROJO
+                status.innerText = "ADJUST LEVEL";
+            }
         });
 
+        // 3. Captura de Fotos Múltiples
+        captureBtn.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            sessionPhotos.push(canvas.toDataURL('image/jpeg'));
+            status.innerText = `CAPTURED: OUTLET ${sessionPhotos.length}`;
+            finishBtn.style.display = "block";
+
+            // Flash visual
+            document.body.style.background = "#fff";
+            setTimeout(() => { document.body.style.background = "#000"; }, 50);
+        });
+
+        // 4. Botón Finalizar
         finishBtn.addEventListener('click', () => {
-            // Guardamos localmente para no perderlas
             localStorage.setItem('scannedPhotos', JSON.stringify(sessionPhotos));
-            // Redirigimos al formulario de datos y pago
-            window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview"; 
-        });finishBtn.addEventListener('click', () => {
-    // Redirigimos al formulario de datos y pago
-    window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview";
-});    </script>
+            window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview";
+        });
+    </script>
 </body>
 </html>
