@@ -5,69 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; background: #000; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .camera-container { position: relative; width: 100%; max-width: 500px; height: 100%; display: flex; align-items: center; }
-        video, canvas { width: 100%; height: auto; border-radius: 0px; }
+        .camera-container { position: relative; width: 100%; max-width: 500px; height: 100%; display: flex; align-items: center; justify-content: center; }
+        video, canvas { width: 100%; height: auto; object-fit: cover; }
         
-        /* High Precision Overlay */
+        /* Narrower Vertical Frame to force more wall context */
         .overlay {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%; height: 40%; 
-            border: 2px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
+            width: 35%; height: 50%; /* Smaller rectangle = More wall visible */
+            border: 3px solid #00c3ff;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5); /* Semi-transparent shadow */
             pointer-events: none;
             z-index: 10;
-            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px;
         }
 
-        /* Center Crosshair */
-        .overlay::before {
-            content: ""; width: 20px; height: 2px; background: #00ff00; position: absolute;
-        }
-        .overlay::after {
-            content: ""; width: 2px; height: 20px; background: #00ff00; position: absolute;
-        }
-
-        .label {
-            position: absolute; top: -40px; width: 100%;
-            color: #00ff00; font-size: 14px; font-weight: bold; text-align: center;
-            text-transform: uppercase; letter-spacing: 1px;
+        /* Instructions Overlay */
+        .instructions {
+            position: absolute; top: 5%; width: 90%;
+            color: #fff; text-align: center; z-index: 20;
+            font-size: 13px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px;
+            line-height: 1.4;
         }
 
         button {
-            position: absolute; bottom: 40px; left: 50%;
+            position: absolute; bottom: 30px; left: 50%;
             transform: translateX(-50%);
-            padding: 18px 36px; background: #00ff00; color: #000;
-            border: none; border-radius: 8px; font-size: 16px; font-weight: bold;
-            z-index: 20; cursor: pointer; text-transform: uppercase;
+            padding: 18px 40px; background: #00c3ff; color: #fff;
+            border: none; border-radius: 50px; font-size: 16px; font-weight: bold;
+            z-index: 20; cursor: pointer; box-shadow: 0 4px 15px rgba(0,195,255,0.4);
+            text-transform: uppercase;
         }
         #canvas { display: none; }
     </style>
 </head>
 <body>
 
+    <div class="instructions">
+        <strong>IMPORTANT:</strong> Center the outlet in the blue box.<br>
+        Make sure you can see the <strong>wall around it</strong>.<br>
+        Avoid shadows and use bright lights.
+    </div>
+
     <div class="camera-container">
         <video id="video" autoplay playsinline></video>
-        <div id="guide" class="overlay">
-            <div class="label">Center Outlet & Keep Parallel to Wall</div>
-        </div>
+        <div id="guide" class="overlay"></div>
         <canvas id="canvas"></canvas>
-        <button id="snap">Capture High-Res Photo</button>
+        <button id="snap">Take Technical Photo</button>
     </div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const snap = document.getElementById('snap');
-        const guide = document.getElementById('guide');
 
-        // Force High Resolution
         navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 4096 }, height: { ideal: 2160 } }, 
+            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
             audio: false 
         }).then(stream => { video.srcObject = stream; })
-          .catch(err => alert("Error: Camera access required for technical survey."));
+          .catch(err => alert("Error: Camera access is required for the measurement."));
 
         snap.addEventListener('click', () => {
             if (snap.innerText.includes("RETAKE")) { location.reload(); return; }
@@ -78,10 +75,11 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             video.style.display = 'none';
-            guide.style.display = 'none';
+            document.getElementById('guide').style.display = 'none';
+            document.querySelector('.instructions').style.display = 'none';
             canvas.style.display = 'block';
-            snap.innerText = "✓ Photo Captured - Tap to Retake";
-            snap.style.background = "#fff";
+            snap.innerText = "✓ PHOTO SAVED - TAP TO RETAKE";
+            snap.style.background = "#ffb300";
         });
     </script>
 </body>
