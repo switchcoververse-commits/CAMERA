@@ -3,22 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Pro V2.8 - AMABLE</title>
+    <title>Scanner V3.0 - PERSISTENT</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
-        .viewport { position: relative; width: 100vw; height: 70vh; background: #111; }
+        .viewport { position: relative; width: 100vw; height: 65vh; background: #111; }
         video { width: 100%; height: 100%; object-fit: cover; }
         .scanner-frame {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; height: 60%; border: 4px solid red; border-radius: 15px;
-            z-index: 10; pointer-events: none; transition: all 0.3s ease;
+            width: 80%; height: 55%; border: 4px solid red; border-radius: 15px;
+            z-index: 10; pointer-events: none;
         }
-        .controls { height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; padding: 10px; }
-        .status { margin-bottom: 15px; font-weight: bold; font-size: 15px; color: #00d4ff; text-transform: uppercase; letter-spacing: 1px; height: 20px; }
-        .shutter-btn { width: 75px; height: 75px; background: white; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; }
+        .controls { height: 35vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; padding: 10px; }
+        
+        /* Mensajes separados */
+        .level-status { font-weight: bold; font-size: 13px; color: #00d4ff; text-transform: uppercase; }
+        .sales-pitch { font-weight: 900; font-size: 18px; color: #00ff00; min-height: 25px; visibility: hidden; }
+        
+        .shutter-btn { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid #00d4ff; }
         .btn-finish { 
-            display: none; margin-top: 15px; background: #00d4ff; color: #000; border: none; 
-            padding: 14px 28px; font-weight: 900; border-radius: 8px; font-size: 14px;
+            display: none; background: #00d4ff; color: #000; border: none; 
+            padding: 12px 24px; font-weight: 900; border-radius: 8px; font-size: 14px;
         }
     </style>
 </head>
@@ -30,8 +34,11 @@
     </div>
 
     <div class="controls">
-        <div id="status" class="status">TAP SCREEN TO ACTIVATE LEVEL</div>
+        <div id="level-msg" class="level-status">TAP SCREEN TO ACTIVATE</div>
+        <div id="sales-msg" class="sales-pitch">OUTLET SAVED. ANYTHING ELSE?</div>
+        
         <div class="shutter-btn" id="capture"></div>
+        
         <button class="btn-finish" id="finish">FINISH & PROCESS ORDER</button>
     </div>
 
@@ -40,43 +47,36 @@
     <script>
         const video = document.getElementById('video');
         const frame = document.getElementById('frame');
-        const status = document.getElementById('status');
+        const levelMsg = document.getElementById('level-msg');
+        const salesMsg = document.getElementById('sales-msg');
         const captureBtn = document.getElementById('capture');
         const finishBtn = document.getElementById('finish');
         const canvas = document.getElementById('canvas');
         let photos = [];
-        let sensorsActive = false;
-        let justCaptured = false; // El "seguro" para la camarera
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { status.innerText = "CAMERA ERROR"; });
+            .then(stream => { video.srcObject = stream; });
 
-        document.getElementById('tap-zone').addEventListener('click', async () => {
-            if (sensorsActive) return;
+        document.getElementById('tap-zone').onclick = async () => {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                const response = await DeviceOrientationEvent.requestPermission();
-                if (response === 'granted') { startLevel(); }
+                const res = await DeviceOrientationEvent.requestPermission();
+                if (res === 'granted') startLevel();
             } else { startLevel(); }
-            sensorsActive = true;
-            status.innerText = "ALIGN TO SCAN (RED)";
-        });
+            levelMsg.innerText = "ADJUST LEVEL (RED)";
+        };
 
         function startLevel() {
             window.addEventListener('deviceorientation', (e) => {
-                if (justCaptured) return; // Si acabamos de disparar, el nivel NO cambia el texto
-                
                 const tilt = Math.abs(e.beta);
                 const side = Math.abs(e.gamma);
-                
                 if (tilt > 75 && tilt < 105 && side < 6) {
                     frame.style.borderColor = "#00ff00";
-                    status.innerText = "LEVEL OK - READY TO SCAN";
-                    status.style.color = "#00ff00";
+                    levelMsg.innerText = "LEVEL OK - READY";
+                    levelMsg.style.color = "#00ff00";
                 } else {
                     frame.style.borderColor = "red";
-                    status.innerText = "ADJUST LEVEL";
-                    status.style.color = "#00d4ff";
+                    levelMsg.innerText = "ADJUST LEVEL";
+                    levelMsg.style.color = "#00d4ff";
                 }
             });
         }
@@ -87,18 +87,13 @@
             canvas.getContext('2d').drawImage(video, 0, 0);
             photos.push(canvas.toDataURL('image/jpeg', 0.8));
             
-            // Activamos el seguro
-            justCaptured = true;
-            status.innerText = "OUTLET SAVED. ANYTHING ELSE?";
-            status.style.color = "#00ff00";
+            // MOSTRAR LA CAMARERA AMABLE Y EL BOTÓN AZUL
+            salesMsg.style.visibility = "visible"; 
             finishBtn.style.display = "block";
             
-            // Flash y liberar el seguro tras 3 segundos
-            video.style.opacity = "0.4";
-            setTimeout(() => { video.style.opacity = "1"; }, 100);
-            
-            // Devolvemos el control al nivel después de 3 segundos de gloria del mensaje
-            setTimeout(() => { justCaptured = false; }, 3000);
+            // Flash
+            document.body.style.backgroundColor = "white";
+            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 100);
         };
 
         finishBtn.onclick = () => {
