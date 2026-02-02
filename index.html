@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Pro V2.7 FINAL</title>
+    <title>Scanner Pro V2.8 - AMABLE</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
         .viewport { position: relative; width: 100vw; height: 70vh; background: #111; }
@@ -19,7 +19,6 @@
         .btn-finish { 
             display: none; margin-top: 15px; background: #00d4ff; color: #000; border: none; 
             padding: 14px 28px; font-weight: 900; border-radius: 8px; font-size: 14px;
-            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
         }
     </style>
 </head>
@@ -47,13 +46,12 @@
         const canvas = document.getElementById('canvas');
         let photos = [];
         let sensorsActive = false;
+        let justCaptured = false; // El "seguro" para la camarera
 
-        // 1. Iniciar Cámara trasera
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(stream => { video.srcObject = stream; })
             .catch(err => { status.innerText = "CAMERA ERROR"; });
 
-        // 2. Activar Sensores (iPhone/Android)
         document.getElementById('tap-zone').addEventListener('click', async () => {
             if (sensorsActive) return;
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -66,10 +64,11 @@
 
         function startLevel() {
             window.addEventListener('deviceorientation', (e) => {
+                if (justCaptured) return; // Si acabamos de disparar, el nivel NO cambia el texto
+                
                 const tilt = Math.abs(e.beta);
                 const side = Math.abs(e.gamma);
                 
-                // Si el móvil está vertical frente a la pared
                 if (tilt > 75 && tilt < 105 && side < 6) {
                     frame.style.borderColor = "#00ff00";
                     status.innerText = "LEVEL OK - READY TO SCAN";
@@ -82,28 +81,26 @@
             });
         }
 
-        // 3. Botón Capturar (La Camarera Amable)
         captureBtn.onclick = () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            // Guardamos la foto en el array
             photos.push(canvas.toDataURL('image/jpeg', 0.8));
             
-            // Mensaje de venta psicológica
+            // Activamos el seguro
+            justCaptured = true;
             status.innerText = "OUTLET SAVED. ANYTHING ELSE?";
             status.style.color = "#00ff00";
-            
-            // Mostrar botón final solo tras la primera foto
             finishBtn.style.display = "block";
             
-            // Efecto flash
+            // Flash y liberar el seguro tras 3 segundos
             video.style.opacity = "0.4";
-            setTimeout(() => video.style.opacity = "1", 100);
+            setTimeout(() => { video.style.opacity = "1"; }, 100);
+            
+            // Devolvemos el control al nivel después de 3 segundos de gloria del mensaje
+            setTimeout(() => { justCaptured = false; }, 3000);
         };
 
-        // 4. Botón Finalizar
         finishBtn.onclick = () => {
             localStorage.setItem('scannedPhotos', JSON.stringify(photos));
             window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview";
