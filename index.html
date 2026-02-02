@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner V3.1 - BLINK</title>
+    <title>Scanner V3.2 - AUDIO CLICK</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
         .viewport { position: relative; width: 100vw; height: 65vh; background: #111; }
@@ -14,31 +14,13 @@
             z-index: 10; pointer-events: none;
         }
         .controls { height: 35vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; padding: 10px; }
-        
         .level-status { font-weight: bold; font-size: 13px; color: #00d4ff; text-transform: uppercase; }
-        
-        /* ESTILO CAMARERA CON PARPADEO */
-        .sales-pitch { 
-            font-weight: 900; 
-            font-size: 18px; 
-            color: #00ff00; 
-            min-height: 25px; 
-            visibility: hidden; 
-        }
-
-        .blink-animation {
-            animation: blinker 1.5s linear infinite;
-        }
-
-        @keyframes blinker {
-            50% { opacity: 0.3; }
-        }
-        
-        .shutter-btn { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid #00d4ff; }
-        .btn-finish { 
-            display: none; background: #00d4ff; color: #000; border: none; 
-            padding: 12px 24px; font-weight: 900; border-radius: 8px; font-size: 14px;
-        }
+        .sales-pitch { font-weight: 900; font-size: 18px; color: #00ff00; min-height: 25px; visibility: hidden; }
+        .blink-animation { animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0.3; } }
+        .shutter-btn { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; transition: transform 0.1s; }
+        .shutter-btn:active { transform: scale(0.9); }
+        .btn-finish { display: none; background: #00d4ff; color: #000; border: none; padding: 12px 24px; font-weight: 900; border-radius: 8px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -51,9 +33,7 @@
     <div class="controls">
         <div id="level-msg" class="level-status">TAP SCREEN TO ACTIVATE</div>
         <div id="sales-msg" class="sales-pitch">OUTLET SAVED. ANYTHING ELSE?</div>
-        
         <div class="shutter-btn" id="capture"></div>
-        
         <button id="finish" class="btn-finish">FINISH & PROCESS ORDER</button>
     </div>
 
@@ -69,10 +49,30 @@
         const canvas = document.getElementById('canvas');
         let photos = [];
 
+        // Generador de sonido de obturador (Shutter Sound)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playShutterSound() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'white'; // Ruido para simular el click
+            const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < audioCtx.sampleRate * 0.1; i++) { output[i] = Math.random() * 2 - 1; }
+            const src = audioCtx.createBufferSource();
+            src.buffer = noiseBuffer;
+            const lowpass = audioCtx.createBiquadFilter();
+            lowpass.type = "lowpass"; lowpass.frequency.value = 1000;
+            src.connect(lowpass); lowpass.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            src.start(); src.stop(audioCtx.currentTime + 0.1);
+        }
+
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(stream => { video.srcObject = stream; });
 
         document.getElementById('tap-zone').onclick = async () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const res = await DeviceOrientationEvent.requestPermission();
                 if (res === 'granted') startLevel();
@@ -97,19 +97,18 @@
         }
 
         captureBtn.onclick = () => {
+            playShutterSound(); // SONIDO DE CLIC
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             photos.push(canvas.toDataURL('image/jpeg', 0.8));
             
-            // ACTIVAR CAMARERA Y AÑADIR PARPADEO
             salesMsg.style.visibility = "visible"; 
             salesMsg.classList.add('blink-animation');
             finishBtn.style.display = "block";
             
-            // Flash visual
             document.body.style.backgroundColor = "white";
-            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 100);
+            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 80);
         };
 
         finishBtn.onclick = () => {
