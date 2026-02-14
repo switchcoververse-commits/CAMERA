@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner V6.0 - NO FRICTION</title>
+    <title>Scanner V6.1 - CLEAN CYCLE</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
         .viewport { position: relative; width: 100vw; height: 70vh; background: #111; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Marco que empieza en AZUL (Neutro) en lugar de ROJO (Bloqueo) */
-        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; height: 50%; border: 3px solid rgba(0, 212, 255, 0.4); border-radius: 20px; z-index: 10; pointer-events: none; transition: all 0.3s; }
+        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; height: 50%; border: 3px solid rgba(255, 0, 0, 0.5); border-radius: 20px; z-index: 10; pointer-events: none; transition: all 0.3s; }
         
-        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .btn-start { background: #00d4ff; color: #000; padding: 20px 40px; border-radius: 50px; font-weight: 900; font-size: 18px; border: none; box-shadow: 0 0 20px rgba(0,212,255,0.5); }
+        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .btn-start { background: #00d4ff; color: #000; padding: 22px 45px; border-radius: 50px; font-weight: 900; font-size: 20px; border: none; box-shadow: 0 0 25px rgba(0,212,255,0.4); text-transform: uppercase; }
 
         #central-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 90%; pointer-events: none; z-index: 20; }
-        .next-one { font-weight: 900; font-size: 28px; color: #00ff00; text-shadow: 2px 2px 15px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.5s; }
+        .next-one { font-weight: 900; font-size: 28px; color: #00ff00; text-shadow: 2px 2px 15px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.5s ease; line-height: 1.2; }
         
         .controls { height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; }
-        .shutter-btn { width: 85px; height: 85px; background: white; border-radius: 50%; border: 6px solid #222; cursor: pointer; }
+        .shutter-btn { width: 85px; height: 85px; background: white; border-radius: 50%; border: 6px solid #222; cursor: pointer; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .shutter-btn:active { transform: scale(0.9); }
         
-        .btn-finish { display: none; background: #00ff00; color: #000; border: none; padding: 16px 32px; font-weight: 900; border-radius: 50px; font-size: 15px; width: 85%; }
+        .btn-finish { display: none; background: #00ff00; color: #000; border: none; padding: 18px 36px; font-weight: 900; border-radius: 50px; font-size: 16px; width: 85%; letter-spacing: 1px; }
         #loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
     </style>
 </head>
@@ -50,6 +50,7 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
+        // CONFIGURACIÓN
         const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyNkfCU9YQN2QQqLOz-E37EaaKDI8qJn4v9rD6V1pJYpN1x496o0LozNDHb952UbObAVQ/exec"; 
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
 
@@ -62,21 +63,17 @@
         const canvas = document.getElementById('canvas');
         let photos = [];
 
-        // Cámara directa
+        // Iniciar cámara
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { video.srcObject = s; });
 
-        // Activación sin bloqueos
+        // Activar Scanner y Sensores
         startOverlay.onclick = async () => {
             startOverlay.style.display = 'none';
-            
-            // Intentamos sensores, pero si fallan, la app sigue funcionando
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const res = await DeviceOrientationEvent.requestPermission();
-                    if (res === 'granted') {
-                        window.addEventListener('deviceorientation', handleLevel);
-                    }
-                } catch (e) { console.log("Sensores bloqueados, operando en modo manual"); }
+                    if (res === 'granted') window.addEventListener('deviceorientation', handleLevel);
+                } catch (e) { console.log("Permiso sensores denegado"); }
             } else {
                 window.addEventListener('deviceorientation', handleLevel);
             }
@@ -85,7 +82,6 @@
         function handleLevel(e) {
             const tilt = Math.abs(e.beta);
             const side = Math.abs(e.gamma);
-            // Si está nivelado -> Verde. Si no -> Rojo suave (no bloqueante)
             if (tilt > 80 && tilt < 100 && side < 6) {
                 frame.style.borderColor = "#00ff00";
                 frame.style.borderWidth = "6px";
@@ -96,15 +92,18 @@
         }
 
         captureBtn.onclick = () => {
-            // Sonido y Captura
+            // 1. Capturar
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             photos.push(canvas.toDataURL('image/jpeg', 0.6));
             
-            // Feedback visual "Ghost"
-            statusText.style.opacity = "1";
-            setTimeout(() => { statusText.style.opacity = "0.3"; }, 2000);
+            // 2. Feedback Cíclico: Aparece y se va solo
+            statusText.style.opacity = "1"; 
+            setTimeout(() => {
+                statusText.style.opacity = "0"; 
+            }, 2500); // 2 segundos y medio de visibilidad
             
+            // 3. UI
             finishBtn.style.display = "block";
             document.body.style.backgroundColor = "white";
             setTimeout(() => { document.body.style.backgroundColor = "black"; }, 100);
@@ -119,7 +118,7 @@
                 await fetch(WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                 setTimeout(() => { window.location.href = GOOGLE_FORM; }, 1500);
             } catch (err) {
-                alert("Upload error. Check connection.");
+                alert("Upload error.");
                 document.getElementById('loading').style.display = 'none';
             }
         };
