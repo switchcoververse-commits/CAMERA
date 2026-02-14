@@ -3,27 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner V3.2 - AUDIO CLICK</title>
+    <title>Scanner V4.0 - FINAL PRO</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
         .viewport { position: relative; width: 100vw; height: 65vh; background: #111; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .scanner-frame {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; height: 55%; border: 4px solid red; border-radius: 15px;
-            z-index: 10; pointer-events: none;
-        }
+        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 55%; border: 4px solid red; border-radius: 15px; z-index: 10; pointer-events: none; }
         .controls { height: 35vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; padding: 10px; }
-        .level-status { font-weight: bold; font-size: 13px; color: #00d4ff; text-transform: uppercase; }
+        
+        .level-status { font-weight: bold; font-size: 13px; color: #00d4ff; text-transform: uppercase; margin-bottom: 5px; }
         .sales-pitch { font-weight: 900; font-size: 18px; color: #00ff00; min-height: 25px; visibility: hidden; }
-        .blink-animation { animation: blinker 1.5s linear infinite; }
+        .blink { animation: blinker 1.5s linear infinite; }
         @keyframes blinker { 50% { opacity: 0.3; } }
-        .shutter-btn { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; transition: transform 0.1s; }
+
+        .shutter-btn { width: 75px; height: 75px; background: white; border-radius: 50%; border: 5px solid #00d4ff; cursor: pointer; }
         .shutter-btn:active { transform: scale(0.9); }
-        .btn-finish { display: none; background: #00d4ff; color: #000; border: none; padding: 12px 24px; font-weight: 900; border-radius: 8px; font-size: 14px; }
+        
+        .btn-finish { display: none; background: #00d4ff; color: #000; border: none; padding: 14px 28px; font-weight: 900; border-radius: 8px; font-size: 14px; width: 80%; }
+        
+        /* Pantalla de carga */
+        #loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top:20px; font-weight:bold;">SENDING TO DRIVE...</p>
+    </div>
 
     <div class="viewport" id="tap-zone">
         <video id="video" autoplay playsinline muted></video>
@@ -33,13 +42,19 @@
     <div class="controls">
         <div id="level-msg" class="level-status">TAP SCREEN TO ACTIVATE</div>
         <div id="sales-msg" class="sales-pitch">OUTLET SAVED. ANYTHING ELSE?</div>
+        
         <div class="shutter-btn" id="capture"></div>
+        
         <button id="finish" class="btn-finish">FINISH & PROCESS ORDER</button>
     </div>
 
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
+        // CONFIGURACIÓN - PEGA TU URL AQUÍ ABAJO
+        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyNkfCU9YQN2QQqLOz-E37EaaKDI8qJn4v9rD6V1pJYpN1x496o0LozNDHb952UbObAVQ/exec"; 
+        const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
+
         const video = document.getElementById('video');
         const frame = document.getElementById('frame');
         const levelMsg = document.getElementById('level-msg');
@@ -49,30 +64,22 @@
         const canvas = document.getElementById('canvas');
         let photos = [];
 
-        // Generador de sonido de obturador (Shutter Sound)
+        // AudioContext para el click
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playShutterSound() {
+        function playClick() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = 'white'; // Ruido para simular el click
-            const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < audioCtx.sampleRate * 0.1; i++) { output[i] = Math.random() * 2 - 1; }
-            const src = audioCtx.createBufferSource();
-            src.buffer = noiseBuffer;
-            const lowpass = audioCtx.createBiquadFilter();
-            lowpass.type = "lowpass"; lowpass.frequency.value = 1000;
-            src.connect(lowpass); lowpass.connect(gain); gain.connect(audioCtx.destination);
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            src.start(); src.stop(audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; });
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { video.srcObject = s; });
 
         document.getElementById('tap-zone').onclick = async () => {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const res = await DeviceOrientationEvent.requestPermission();
                 if (res === 'granted') startLevel();
@@ -97,23 +104,39 @@
         }
 
         captureBtn.onclick = () => {
-            playShutterSound(); // SONIDO DE CLIC
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            playClick();
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            photos.push(canvas.toDataURL('image/jpeg', 0.8));
+            photos.push(canvas.toDataURL('image/jpeg', 0.6)); // Compresión para velocidad
             
             salesMsg.style.visibility = "visible"; 
-            salesMsg.classList.add('blink-animation');
+            salesMsg.classList.add('blink');
             finishBtn.style.display = "block";
             
             document.body.style.backgroundColor = "white";
-            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 80);
+            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 100);
         };
 
-        finishBtn.onclick = () => {
-            localStorage.setItem('scannedPhotos', JSON.stringify(photos));
-            window.location.href = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform?usp=preview";
+        finishBtn.onclick = async () => {
+            document.getElementById('loading').style.display = 'flex';
+            const payload = {
+                userName: "Client_" + new Date().toLocaleTimeString(),
+                photos: photos
+            };
+
+            try {
+                // Envío silencioso a Google Drive
+                await fetch(WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                });
+                // Esperamos un poco para asegurar el envío y saltamos al formulario
+                setTimeout(() => { window.location.href = GOOGLE_FORM; }, 1500);
+            } catch (err) {
+                alert("Error sending. Check connection.");
+                document.getElementById('loading').style.display = 'none';
+            }
         };
     </script>
 </body>
