@@ -59,7 +59,6 @@
         const canvas = document.getElementById('canvas');
         const flash = document.getElementById('flash');
 
-        // Lógica del Hilo de Ariadna: Extraer ID de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2, 6).toUpperCase();
         document.getElementById('order-number').innerText = "ORDER ID: " + etyOrderID;
@@ -93,15 +92,22 @@
             startOverlay.style.display = 'none';
         };
 
+        // NUEVO NIVELADOR 360 INTEGRADO (Pared, Piso y Techo)
         function handleLevel(e) {
-            const tilt = Math.abs(e.beta);
-            const side = Math.abs(e.gamma);
-            if (tilt > 80 && tilt < 100 && side < 6) {
-                frame.style.borderColor = "#00ff00";
+            const tilt = Math.abs(e.beta);  
+            const side = Math.abs(e.gamma); 
+            
+            const isWall = (tilt > 86 && tilt < 94 && side < 4);
+            const isFloorCeiling = (tilt < 5 || tilt > 175) && (side < 5);
+
+            if (isWall || isFloorCeiling) {
+                frame.style.borderColor = "#00ff00"; 
                 frame.style.borderWidth = "6px";
+                frame.style.boxShadow = "0 0 20px rgba(0, 255, 0, 0.5)";
             } else {
-                frame.style.borderColor = "rgba(255, 0, 0, 0.6)";
+                frame.style.borderColor = "rgba(255, 0, 0, 0.6)"; 
                 frame.style.borderWidth = "4px";
+                frame.style.boxShadow = "none";
             }
         }
 
@@ -120,7 +126,6 @@
         finishBtn.onclick = async () => {
             document.getElementById('loading').style.display = 'flex';
             try {
-                // Envío con el ID del Hilo de Ariadna
                 await fetch(WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ userName: etyOrderID, photos: photos }) });
                 setTimeout(() => { 
                     window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID; 
