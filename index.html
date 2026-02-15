@@ -3,43 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner V6.1 - CLEAN CYCLE</title>
+    <title>Scanner Pro V7.5</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; text-align: center; }
-        .viewport { position: relative; width: 100vw; height: 70vh; background: #111; }
+        .viewport { position: relative; width: 100vw; height: 70vh; background: #111; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; height: 50%; border: 3px solid rgba(255, 0, 0, 0.5); border-radius: 20px; z-index: 10; pointer-events: none; transition: all 0.3s; }
-        
-        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        .btn-start { background: #00d4ff; color: #000; padding: 22px 45px; border-radius: 50px; font-weight: 900; font-size: 20px; border: none; box-shadow: 0 0 25px rgba(0,212,255,0.4); text-transform: uppercase; }
+        /* Efecto Flash */
+        #flash { position: absolute; top:0; left:0; width:100%; height:100%; background: white; opacity: 0; z-index: 50; pointer-events: none; }
 
-        #central-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 90%; pointer-events: none; z-index: 20; }
-        .next-one { font-weight: 900; font-size: 28px; color: #00ff00; text-shadow: 2px 2px 15px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.5s ease; line-height: 1.2; }
+        /* Marco de Nivelación */
+        .scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; height: 55%; border: 4px solid rgba(255, 0, 0, 0.6); border-radius: 25px; z-index: 10; pointer-events: none; transition: all 0.3s ease; }
+        
+        /* Pantalla de Inicio */
+        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .btn-start { background: #00d4ff; color: #000; padding: 25px 50px; border-radius: 60px; font-weight: 900; font-size: 22px; border: none; box-shadow: 0 0 30px rgba(0,212,255,0.5); text-transform: uppercase; cursor: pointer; }
+
+        /* Mensaje NEXT ONE (Fade-out corregido) */
+        #central-msg { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 90%; pointer-events: none; z-index: 60; text-align: center; }
+        .status-text { font-weight: 900; font-size: 32px; color: #00ff00; text-shadow: 0 0 20px rgba(0,0,0,1); opacity: 0; transition: opacity 0.8s ease; }
         
         .controls { height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; }
-        .shutter-btn { width: 85px; height: 85px; background: white; border-radius: 50%; border: 6px solid #222; cursor: pointer; box-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-btn { width: 90px; height: 90px; background: white; border-radius: 50%; border: 8px solid #333; cursor: pointer; }
         
-        .btn-finish { display: none; background: #00ff00; color: #000; border: none; padding: 18px 36px; font-weight: 900; border-radius: 50px; font-size: 16px; width: 85%; letter-spacing: 1px; }
-        #loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
+        .btn-finish { display: none; background: #00ff00; color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 50px; font-size: 16px; width: 85%; animation: pulse 2s infinite; cursor: pointer; }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+
+        #loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.98); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
+        .spinner { width: 60px; height: 60px; border: 6px solid #222; border-top: 6px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loading">
-        <div style="width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #00ff00; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top:20px; font-weight:900; color: #00ff00;">SENDING TO DRIVE...</p>
+        <div class="spinner"></div>
+        <p style="margin-top:25px; font-weight:900; color: #00ff00; font-size: 20px;">SENDING TO DRIVE...</p>
     </div>
 
+    <div id="flash"></div>
+
     <div id="start-overlay">
-        <button class="btn-start">START SCANNER</button>
+        <h2 style="margin-bottom: 30px; letter-spacing: 2px;">READY TO SCAN?</h2>
+        <button class="btn-start" id="init-btn">START SCANNER</button>
     </div>
 
     <div class="viewport">
         <video id="video" autoplay playsinline muted></video>
         <div class="scanner-frame" id="frame"></div>
-        <div id="central-msg"><div id="status-text" class="next-one">DEVICE SAVED.<br>NEXT ONE!</div></div>
+        <div id="central-msg"><div id="status-text" class="status-text">DEVICE SAVED.<br>NEXT ONE!</div></div>
     </div>
 
     <div class="controls">
@@ -50,7 +62,6 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // CONFIGURACIÓN
         const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyNkfCU9YQN2QQqLOz-E37EaaKDI8qJn4v9rD6V1pJYpN1x496o0LozNDHb952UbObAVQ/exec"; 
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
 
@@ -61,22 +72,37 @@
         const captureBtn = document.getElementById('capture');
         const finishBtn = document.getElementById('finish');
         const canvas = document.getElementById('canvas');
+        const flash = document.getElementById('flash');
+        
         let photos = [];
+        // Generar un ID único corto para evitar confusiones en alto volumen
+        const sessionID = Math.random().toString(36).substring(2, 6).toUpperCase();
 
-        // Iniciar cámara
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playCameraSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { video.srcObject = s; });
 
-        // Activar Scanner y Sensores
-        startOverlay.onclick = async () => {
-            startOverlay.style.display = 'none';
+        document.getElementById('init-btn').onclick = async () => {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const res = await DeviceOrientationEvent.requestPermission();
                     if (res === 'granted') window.addEventListener('deviceorientation', handleLevel);
-                } catch (e) { console.log("Permiso sensores denegado"); }
+                } catch (e) { console.log("Sensors off"); }
             } else {
                 window.addEventListener('deviceorientation', handleLevel);
             }
+            startOverlay.style.display = 'none';
         };
 
         function handleLevel(e) {
@@ -86,39 +112,45 @@
                 frame.style.borderColor = "#00ff00";
                 frame.style.borderWidth = "6px";
             } else {
-                frame.style.borderColor = "rgba(255, 0, 0, 0.5)";
-                frame.style.borderWidth = "3px";
+                frame.style.borderColor = "rgba(255, 0, 0, 0.6)";
+                frame.style.borderWidth = "4px";
             }
         }
 
         captureBtn.onclick = () => {
-            // 1. Capturar
+            playCameraSound();
+            flash.style.opacity = "1";
+            setTimeout(() => { flash.style.opacity = "0"; }, 80);
+
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             photos.push(canvas.toDataURL('image/jpeg', 0.6));
             
-            // 2. Feedback Cíclico: Aparece y se va solo
-            statusText.style.opacity = "1"; 
+            // Ciclo de Limpieza: 2 seg fijo + Fade-out
+            statusText.style.opacity = "1";
             setTimeout(() => {
-                statusText.style.opacity = "0"; 
-            }, 2500); // 2 segundos y medio de visibilidad
+                statusText.style.opacity = "0";
+            }, 2000);
             
-            // 3. UI
             finishBtn.style.display = "block";
-            document.body.style.backgroundColor = "white";
-            setTimeout(() => { document.body.style.backgroundColor = "black"; }, 100);
         };
 
         finishBtn.onclick = async () => {
             document.getElementById('loading').style.display = 'flex';
             const now = new Date();
             const timeTag = now.getHours() + "-" + now.getMinutes();
-            const payload = { userName: "ORDER_" + timeTag, photos: photos };
+            // Carpeta incluye ID ÚNICO para alto volumen (ej: ORDER_19-45_A2B4)
+            const orderName = "ORDER_" + timeTag + "_" + sessionID;
+            
             try {
-                await fetch(WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                setTimeout(() => { window.location.href = GOOGLE_FORM; }, 1500);
+                await fetch(WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ userName: orderName, photos: photos }) });
+                
+                // Redirección con ID en la URL para automatización futura
+                setTimeout(() => { 
+                    window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + sessionID; 
+                }, 1500);
             } catch (err) {
-                alert("Upload error.");
+                alert("Connection Error.");
                 document.getElementById('loading').style.display = 'none';
             }
         };
