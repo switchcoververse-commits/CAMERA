@@ -47,8 +47,8 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // CONFIGURACIÓN DE CONEXIÓN (Hilo de Ariadna) - URL ACTUALIZADA ✅
-        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbysN2EI4bw22TYrxgN55XKzIzHC6vMG6wVn6hz-mrk1jqCeT2fTNKW6VIzi4OyNWVqUkA/exec";
+        // CONFIGURACIÓN DE CONEXIÓN - URL ACTUALIZADA ✅
+        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwn9Nv-aMO0i7aKV0AHijdzzhMZshS0um_KIAkfhPUgQihTYgH-HXSpCK5NPwU_8IpMLA/exec";
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
 
         const video = document.getElementById('video');
@@ -80,9 +80,16 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { video.srcObject = s; });
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { 
+            video.srcObject = s;
+            // Forzar que el audio context se active
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        });
 
         document.getElementById('init-btn').onclick = async () => {
+            audioCtx.resume(); // <--- NUEVA LÍNEA PARA EL SONIDO
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const res = await DeviceOrientationEvent.requestPermission();
