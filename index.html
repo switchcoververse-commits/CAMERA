@@ -14,6 +14,7 @@
         .btn-start { background: #00d4ff; color: #000; padding: 25px 50px; border-radius: 60px; font-weight: 900; font-size: 22px; border: none; box-shadow: 0 0 30px rgba(0,212,255,0.5); text-transform: uppercase; cursor: pointer; }
         #central-msg { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 90%; pointer-events: none; z-index: 60; text-align: center; }
         .status-text { font-weight: 900; font-size: 32px; color: #00ff00; text-shadow: 0 0 20px rgba(0,0,0,1); opacity: 0; transition: opacity 0.8s ease; }
+        .invalid-text { font-weight: 900; font-size: 28px; color: #ff3333; text-shadow: 0 0 20px rgba(0,0,0,1); opacity: 0; transition: opacity 0.8s ease; }
         .controls { height: 30vh; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; background: #000; }
         .shutter-btn { width: 90px; height: 90px; background: white; border-radius: 50%; border: 8px solid #333; cursor: pointer; }
         .btn-finish { display: none; background: #00ff00; color: #000; border: none; padding: 18px 40px; font-weight: 900; border-radius: 50px; font-size: 16px; width: 85%; animation: pulse 2s infinite; cursor: pointer; }
@@ -36,7 +37,10 @@
     <div class="viewport">
         <video id="video" autoplay playsinline muted></video>
         <div class="scanner-frame" id="frame"></div>
-        <div id="central-msg"><div id="status-text" class="status-text">DEVICE SAVED.<br>NEXT ONE!</div></div>
+        <div id="central-msg">
+            <div id="status-text" class="status-text">DEVICE SAVED.<br>NEXT ONE!</div>
+            <div id="invalid-text" class="invalid-text" style="display: none;">INVALID PHOTO<br>PLEASE ALIGN DEVICE</div>
+        </div>
     </div>
 
     <div class="controls">
@@ -47,7 +51,7 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // CONFIGURACIÓN DE CONEXIÓN - URL ACTUALIZADA ✅
+        // CONFIGURACIÓN DE CONEXIÓN
         const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwn9Nv-aMO0i7aKV0AHijdzzhMZshS0um_KIAkfhPUgQihTYgH-HXSpCK5NPwU_8IpMLA/exec";
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
 
@@ -55,17 +59,25 @@
         const frame = document.getElementById('frame');
         const startOverlay = document.getElementById('start-overlay');
         const statusText = document.getElementById('status-text');
+        const invalidText = document.getElementById('invalid-text');
         const captureBtn = document.getElementById('capture');
         const finishBtn = document.getElementById('finish');
         const canvas = document.getElementById('canvas');
         const flash = document.getElementById('flash');
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        const MAX_PHOTOS = 6;
+        let isLevelValid = false;
+        let photos = [];
+        let orientationActive = false; // MEJORA 4: Evitar múltiples listeners
 
         // LÓGICA DE VINCULACIÓN: Captura el ID de Etsy de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2, 6).toUpperCase();
         document.getElementById('order-number').innerText = "ORDER ID: " + etyOrderID;
 
-        let photos = [];
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playCameraSound() {
@@ -80,39 +92,47 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(s => { 
-            video.srcObject = s;
-            // Forzar que el audio context se active
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        });
+        // MEJORA 2: Manejar error si la cámara no da permisos
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => { 
+                video.srcObject = s;
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            })
+            .catch(err => {
+                alert("Camera access is required to continue.");
+            });
 
         document.getElementById('init-btn').onclick = async () => {
-            audioCtx.resume(); // <--- NUEVA LÍNEA PARA EL SONIDO
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try {
-                    const res = await DeviceOrientationEvent.requestPermission();
-                    if (res === 'granted') window.addEventListener('deviceorientation', handleLevel);
-                } catch (e) {}
-            } else {
-                window.addEventListener('deviceorientation', handleLevel);
+            audioCtx.resume();
+            if (!orientationActive) { // MEJORA 4: Solo agregar listener una vez
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try {
+                        const res = await DeviceOrientationEvent.requestPermission();
+                        if (res === 'granted') window.addEventListener('deviceorientation', handleLevel);
+                    } catch (e) {}
+                } else {
+                    window.addEventListener('deviceorientation', handleLevel);
+                }
+                orientationActive = true;
             }
             startOverlay.style.display = 'none';
         };
 
-        // NIVELADOR TOTAL CORREGIDO (PARED + PISO + TECHO)
+        // ============================================
+        // NIVELADOR CON VARIABLE DE ESTADO
+        // ============================================
         function handleLevel(e) {
             const tilt = Math.abs(e.beta);  
             const side = Math.abs(e.gamma); 
-            
-            // PARED: Teléfono vertical (Beta ~90)
+
             const isWall = (tilt > 75 && tilt < 105 && side < 8);
-            
-            // PISO/TECHO: Teléfono plano (Beta ~0 o ~180)
             const isFlat = (tilt < 10 || tilt > 170) && (side < 10);
 
-            if (isWall || isFlat) {
+            isLevelValid = (isWall || isFlat);
+
+            if (isLevelValid) {
                 frame.style.borderColor = "#00ff00"; 
                 frame.style.borderWidth = "6px";
                 frame.style.boxShadow = "0 0 25px #00ff00";
@@ -123,32 +143,92 @@
             }
         }
 
+        // ============================================
+        // CAPTURA DE FOTO CON VALIDACIÓN DE NIVEL
+        // ============================================
         captureBtn.onclick = () => {
+            // MEJORA 1: Esperar a que el video esté listo
+            if (!video.videoWidth) return;
+
+            // Validar nivelación
+            if (!isLevelValid) {
+                invalidText.style.display = "block";
+                invalidText.style.opacity = "1";
+                setTimeout(() => { 
+                    invalidText.style.opacity = "0"; 
+                    setTimeout(() => { invalidText.style.display = "none"; }, 500);
+                }, 2000);
+                return;
+            }
+
+            // Validar límite de fotos
+            if (photos.length >= MAX_PHOTOS) {
+                alert("Maximum " + MAX_PHOTOS + " photos per order.");
+                return;
+            }
+
             playCameraSound();
             flash.style.opacity = "1";
             setTimeout(() => { flash.style.opacity = "0"; }, 80);
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+
+            canvas.width = video.videoWidth; 
+            canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            photos.push(canvas.toDataURL('image/jpeg', 0.6));
+
+            photos.push(canvas.toDataURL('image/jpeg', 0.45));
+
+            invalidText.style.display = "none";
+            statusText.innerText = "DEVICE SAVED.\nNEXT ONE!";
             statusText.style.opacity = "1";
             setTimeout(() => { statusText.style.opacity = "0"; }, 2000);
+
             finishBtn.style.display = "block";
         };
 
+        // ============================================
+        // FINALIZAR PEDIDO
+        // ============================================
         finishBtn.onclick = async () => {
+            // MEJORA 3: Controlar pérdida de conexión antes de enviar
+            if (!navigator.onLine) {
+                alert("No internet connection detected.");
+                return;
+            }
+
+            if (photos.length === 0) {
+                alert("Please capture at least one image before finishing the order.");
+                return;
+            }
+
+            finishBtn.disabled = true;
             document.getElementById('loading').style.display = 'flex';
+            
             try {
-                // ENVÍO DE DATOS VINCULADOS AL ID DEL CLIENTE - SIN mode: 'no-cors' ✅
-                await fetch(WEBAPP_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ userName: etyOrderID, photos: photos }) 
+                const response = await fetch(WEBAPP_URL, { 
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ 
+                        userName: etyOrderID, 
+                        photos: photos 
+                    }) 
                 });
+
+                const result = await response.json();
+
+                if (result.status !== "success") {
+                    throw new Error(result.error || "Server error");
+                }
+
                 setTimeout(() => { 
                     window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID; 
                 }, 1500);
+
             } catch (err) {
-                alert("Connection Error.");
+                alert("Upload failed: " + err.message);
                 document.getElementById('loading').style.display = 'none';
+                finishBtn.disabled = false;
             }
         };
     </script>
