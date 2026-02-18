@@ -51,9 +51,19 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // CONFIGURACIÓN DE CONEXIÓN
-        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwk7wtmSe6E9M3SdMAX3EK9hV_u3p3Og-pugGc04JMV1tYtK-SuXYqs8ivW_odiqo17YQ/exec";        
+        // ============================================
+        // CONFIGURACIÓN - URL NUEVA IMPLEMENTACIÓN
+        // ============================================
+        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwk7wtmSe6E9M3SdMAX3EK9hV_u3p3Og-pugGc04JMV1tYtK-SuXYqs8ivW_odiqo17YQ/exec";
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        const MAX_PHOTOS = 6;
+        let isLevelValid = false;
+        let photos = [];
+        let orientationActive = false;
 
         const video = document.getElementById('video');
         const frame = document.getElementById('frame');
@@ -65,19 +75,14 @@
         const canvas = document.getElementById('canvas');
         const flash = document.getElementById('flash');
 
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
-        const MAX_PHOTOS = 6;
-        let isLevelValid = false;
-        let photos = [];
-        let orientationActive = false; // MEJORA 4: Evitar múltiples listeners
-
-        // LÓGICA DE VINCULACIÓN: Captura el ID de Etsy de la URL
+        // Obtener Order ID de la URL (Etsy)
         const urlParams = new URLSearchParams(window.location.search);
         const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2, 6).toUpperCase();
         document.getElementById('order-number').innerText = "ORDER ID: " + etyOrderID;
 
+        // ============================================
+        // AUDIO (Sonido del obturador)
+        // ============================================
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playCameraSound() {
@@ -92,13 +97,13 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        // MEJORA 2: Manejar error si la cámara no da permisos
+        // ============================================
+        // INICIALIZACIÓN DE CÁMARA Y PERMISOS
+        // ============================================
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => { 
+            .then(s => {
                 video.srcObject = s;
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
             })
             .catch(err => {
                 alert("Camera access is required to continue.");
@@ -106,7 +111,7 @@
 
         document.getElementById('init-btn').onclick = async () => {
             audioCtx.resume();
-            if (!orientationActive) { // MEJORA 4: Solo agregar listener una vez
+            if (!orientationActive) {
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                     try {
                         const res = await DeviceOrientationEvent.requestPermission();
@@ -124,109 +129,92 @@
         // NIVELADOR CON VARIABLE DE ESTADO
         // ============================================
         function handleLevel(e) {
-            const tilt = Math.abs(e.beta);  
-            const side = Math.abs(e.gamma); 
-
+            const tilt = Math.abs(e.beta);
+            const side = Math.abs(e.gamma);
             const isWall = (tilt > 75 && tilt < 105 && side < 8);
             const isFlat = (tilt < 10 || tilt > 170) && (side < 10);
-
             isLevelValid = (isWall || isFlat);
-
             if (isLevelValid) {
-                frame.style.borderColor = "#00ff00"; 
+                frame.style.borderColor = "#00ff00";
                 frame.style.borderWidth = "6px";
                 frame.style.boxShadow = "0 0 25px #00ff00";
             } else {
-                frame.style.borderColor = "rgba(255, 0, 0, 0.6)"; 
+                frame.style.borderColor = "rgba(255, 0, 0, 0.6)";
                 frame.style.borderWidth = "4px";
                 frame.style.boxShadow = "none";
             }
         }
 
         // ============================================
-        // CAPTURA DE FOTO CON VALIDACIÓN DE NIVEL
+        // CAPTURA DE FOTO (CON VALIDACIONES)
         // ============================================
         captureBtn.onclick = () => {
-            // MEJORA 1: Esperar a que el video esté listo
             if (!video.videoWidth) return;
-
-            // Validar nivelación
             if (!isLevelValid) {
                 invalidText.style.display = "block";
                 invalidText.style.opacity = "1";
-                setTimeout(() => { 
-                    invalidText.style.opacity = "0"; 
+                setTimeout(() => {
+                    invalidText.style.opacity = "0";
                     setTimeout(() => { invalidText.style.display = "none"; }, 500);
                 }, 2000);
                 return;
             }
-
-            // Validar límite de fotos
             if (photos.length >= MAX_PHOTOS) {
                 alert("Maximum " + MAX_PHOTOS + " photos per order.");
                 return;
             }
-
             playCameraSound();
             flash.style.opacity = "1";
             setTimeout(() => { flash.style.opacity = "0"; }, 80);
-
-            canvas.width = video.videoWidth; 
+            canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-
             photos.push(canvas.toDataURL('image/jpeg', 0.45));
-
             invalidText.style.display = "none";
             statusText.innerText = "DEVICE SAVED.\nNEXT ONE!";
             statusText.style.opacity = "1";
             setTimeout(() => { statusText.style.opacity = "0"; }, 2000);
-
             finishBtn.style.display = "block";
         };
 
         // ============================================
-        // FINALIZAR PEDIDO
+        // FINALIZAR PEDIDO - CON NO-CORS (SOLUCIÓN DEFINITIVA)
         // ============================================
         finishBtn.onclick = async () => {
-            // MEJORA 3: Controlar pérdida de conexión antes de enviar
+            // Validaciones previas
             if (!navigator.onLine) {
                 alert("No internet connection detected.");
                 return;
             }
-
             if (photos.length === 0) {
                 alert("Please capture at least one image before finishing the order.");
                 return;
             }
 
+            // Protección contra doble clic
             finishBtn.disabled = true;
             document.getElementById('loading').style.display = 'flex';
-            
+
             try {
-                const response = await fetch(WEBAPP_URL, { 
+                // ENVÍO CON NO-CORS (SIN CABECERAS NI RESPUESTA)
+                await fetch(WEBAPP_URL, {
                     method: 'POST',
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ 
-                        userName: etyOrderID, 
-                        photos: photos 
-                    }) 
+                    mode: 'no-cors', // ← SOLUCIÓN DEFINITIVA CONTRA CORS
+                    body: JSON.stringify({
+                        userName: etyOrderID,
+                        photos: photos
+                    })
                 });
 
-                const result = await response.json();
-
-                if (result.status !== "success") {
-                    throw new Error(result.error || "Server error");
-                }
-
-                setTimeout(() => { 
-                    window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID; 
+                // Como usamos no-cors, no podemos leer la respuesta.
+                // Asumimos éxito y redirigimos.
+                setTimeout(() => {
+                    window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID;
                 }, 1500);
 
             } catch (err) {
-                alert("Upload failed: " + err.message);
+                // Este catch solo capturará errores de red graves (sin conexión)
+                alert("Network error. Please check your connection.");
                 document.getElementById('loading').style.display = 'none';
                 finishBtn.disabled = false;
             }
