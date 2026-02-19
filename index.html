@@ -52,9 +52,9 @@
 
     <script>
         // ============================================
-        // CONFIGURACIÓN - URL NUEVA IMPLEMENTACIÓN
+        // CONFIGURACIÓN - NUEVA URL DEL WEB APP
         // ============================================
-        https://script.google.com/macros/s/AKfycbyqSTznNYiMFZ9M2r-36g38jyaUVUEg1bF1U9my3USemyY00Wv4AgwDyfzTsi0APfhNig/exec
+        const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyqSTznNYiMFZ9M2r-36g38jyaUVUEg1bF1U9my3USemyY00Wv4AgwDyfzTsi0APfhNig/exec";
         const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
 
         // ============================================
@@ -178,10 +178,9 @@
         };
 
         // ============================================
-        // FINALIZAR PEDIDO - CON NO-CORS (SOLUCIÓN DEFINITIVA)
+        // FINALIZAR PEDIDO - CON NO-CORS
         // ============================================
         finishBtn.onclick = async () => {
-            // Validaciones previas
             if (!navigator.onLine) {
                 alert("No internet connection detected.");
                 return;
@@ -191,29 +190,24 @@
                 return;
             }
 
-            // Protección contra doble clic
             finishBtn.disabled = true;
             document.getElementById('loading').style.display = 'flex';
 
             try {
-                // ENVÍO CON NO-CORS (SIN CABECERAS NI RESPUESTA)
                 await fetch(WEBAPP_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // ← SOLUCIÓN DEFINITIVA CONTRA CORS
+                    mode: 'no-cors',
                     body: JSON.stringify({
                         userName: etyOrderID,
                         photos: photos
                     })
                 });
 
-                // Como usamos no-cors, no podemos leer la respuesta.
-                // Asumimos éxito y redirigimos.
                 setTimeout(() => {
                     window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID;
                 }, 1500);
 
             } catch (err) {
-                // Este catch solo capturará errores de red graves (sin conexión)
                 alert("Network error. Please check your connection.");
                 document.getElementById('loading').style.display = 'none';
                 finishBtn.disabled = false;
