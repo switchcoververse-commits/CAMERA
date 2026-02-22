@@ -3,22 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Pro V8.0 - Hilo de Ariadna</title>
+<title>Scanner Pro V9.0 - Hilo de Ariadna</title>
 <style>
-    body { margin:0; background:#000; color:white; font-family:-apple-system, sans-serif; overflow:hidden; text-align:center; }
-    .viewport { position:relative; width:100vw; height:70vh; background:#111; overflow:hidden; }
+    body { margin:0; background:#000; color:white; font-family:-apple-system, sans-serif; overflow:hidden; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .top-bar { width:100%; display:flex; justify-content:space-between; padding:10px; box-sizing:border-box; }
+    .top-bar button { background:none; border:none; color:#fff; font-size:24px; cursor:pointer; }
+    .status { width:90%; margin:10px auto; background:#222; border-radius:10px; padding:10px; font-weight:600; font-size:18px; }
+    .viewport { position:relative; width:90vw; height:50vh; background:#111; margin-top:10px; overflow:hidden; border-radius:15px; }
     video { width:100%; height:100%; object-fit:cover; }
-    #flash { position:absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; z-index:50; pointer-events:none; }
-    .scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:75%; height:55%; border:4px solid rgba(255,0,0,0.6); border-radius:25px; z-index:10; pointer-events:none; transition: all 0.3s ease; }
-    #start-overlay { position:absolute; top:0; left:0; width:100%; height:100%; z-index:100; background: rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
-    .btn-start { background:#00d4ff; color:#000; padding:25px 50px; border-radius:60px; font-weight:900; font-size:22px; border:none; box-shadow:0 0 30px rgba(0,212,255,0.5); text-transform:uppercase; cursor:pointer; }
-    #central-msg { position:absolute; top:45%; left:50%; transform:translate(-50%, -50%); width:90%; pointer-events:none; z-index:60; text-align:center; }
-    .status-text { font-weight:900; font-size:32px; color:#00ff00; text-shadow:0 0 20px rgba(0,0,0,1); opacity:0; transition:opacity 0.8s ease; }
-    .invalid-text { font-weight:900; font-size:28px; color:#ff3333; text-shadow:0 0 20px rgba(0,0,0,1); opacity:0; transition:opacity 0.8s ease; }
-    .controls { height:30vh; display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; background:#000; }
-    .shutter-btn { width:90px; height:90px; background:white; border-radius:50%; border:8px solid #333; cursor:pointer; }
-    .btn-finish { display:none; background:#00ff00; color:#000; border:none; padding:18px 40px; font-weight:900; border-radius:50px; font-size:16px; width:85%; animation:pulse 2s infinite; cursor:pointer; }
-    @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
+    .scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:75%; height:55%; border:4px solid rgba(0,255,0,0.6); border-radius:15px; pointer-events:none; transition: all 0.3s ease; }
+    .help { margin-top:10px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#aaa; }
+    .help span { margin-left:5px; }
+    .controls { width:100%; display:flex; justify-content:center; align-items:center; margin-top:20px; position:relative; }
+    .shutter-btn { width:90px; height:90px; background:#555; border-radius:50%; border:4px solid #333; cursor:pointer; }
+    #flash-btn { position:absolute; right:20px; bottom:0; font-size:24px; cursor:pointer; }
+    #photo-list { display:flex; overflow-x:auto; margin-top:15px; padding:5px; }
+    .photo-item { position:relative; margin-right:10px; }
+    .photo-item img { width:80px; height:80px; object-fit:cover; border-radius:8px; }
+    .delete-btn { position:absolute; top:2px; right:2px; background:#f33; border:none; border-radius:50%; width:20px; height:20px; color:#fff; font-size:14px; cursor:pointer; }
     #loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.98); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
     .spinner { width:60px; height:60px; border:6px solid #222; border-top:6px solid #00ff00; border-radius:50%; animation:spin 1s linear infinite; }
     @keyframes spin {0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);}}
@@ -26,146 +28,117 @@
 </head>
 <body>
 
-<div id="loading">
-    <div class="spinner"></div>
-    <p style="margin-top:25px; font-weight:900; color:#00ff00; font-size:20px;">SENDING TO DRIVE...</p>
+<div class="top-bar">
+    <button id="back-btn">&lt;</button>
+    <button id="close-btn">X</button>
 </div>
 
-<div id="flash"></div>
-
-<div id="start-overlay">
-    <h2 id="order-display" style="margin-bottom:10px; letter-spacing:2px;">SCANNER READY</h2>
-    <p id="order-number" style="color:#00d4ff; font-weight:bold; margin-bottom:30px;"></p>
-    <button class="btn-start" id="init-btn">START SCANNER</button>
-</div>
+<div class="status" id="status-text">Cargando cámara...</div>
 
 <div class="viewport">
     <video id="video" autoplay playsinline muted></video>
     <div class="scanner-frame" id="frame"></div>
-    <div id="central-msg">
-        <div id="status-text" class="status-text">DEVICE SAVED.<br>NEXT ONE!</div>
-        <div id="invalid-text" class="invalid-text" style="display:none;">INVALID PHOTO<br>PLEASE ALIGN DEVICE</div>
-    </div>
+</div>
+
+<div class="help">
+    <img src="info-icon.png" width="16" height="16" alt="info">
+    <span>Consejos para hacer la foto</span>
 </div>
 
 <div class="controls">
     <div class="shutter-btn" id="capture"></div>
-    <button id="finish" class="btn-finish">DONE: FINISH ORDER</button>
+    <div id="flash-btn">⚡</div>
+</div>
+
+<div id="photo-list"></div>
+
+<div id="loading">
+    <div class="spinner"></div>
+    <p style="margin-top:25px; font-weight:900; color:#00ff00; font-size:20px;">ENVIANDO...</p>
 </div>
 
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    // ============================================
-    // CONFIGURACIÓN
-    // ============================================
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwEESxXzguvjQsQVwACMY1lxLx0pRLR5p46vpt5VZFKrFUU7iRA3OJbCoPhTDzgKnkWRw/exec";
-    const GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLScbU0wmhZIKDQAuYEoptN-RsS7f2FSGsTVoZqZTCIZu2oVCiA/viewform";
-    const MAX_PHOTOS = 30;
+const WEBAPP_URL = "https://script.google.com/macros/s/YOUR_WEBAPP_ID/exec";
+const GOOGLE_FORM = "https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform";
+const MAX_PHOTOS = 30;
 
-    let photos = [];
-    let isLevelValid = false;
-    let orientationActive = false;
+let photos = [];
+let isLevelValid = false;
+let video = document.getElementById('video');
+let frame = document.getElementById('frame');
+let statusText = document.getElementById('status-text');
+let photoList = document.getElementById('photo-list');
+let canvas = document.getElementById('canvas');
 
-    const video = document.getElementById('video');
-    const frame = document.getElementById('frame');
-    const startOverlay = document.getElementById('start-overlay');
-    const statusText = document.getElementById('status-text');
-    const invalidText = document.getElementById('invalid-text');
-    const captureBtn = document.getElementById('capture');
-    const finishBtn = document.getElementById('finish');
-    const canvas = document.getElementById('canvas');
-    const flash = document.getElementById('flash');
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+.then(s => { video.srcObject = s; statusText.innerText="Cámara lista."; })
+.catch(err => { alert("Se requiere acceso a cámara."); });
 
-    // Obtener Order ID de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2,6).toUpperCase();
-    document.getElementById('order-number').innerText = "ORDER ID: " + etyOrderID;
-
-    // AUDIO
+function playCameraSound(){
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playCameraSound(){
-        if(audioCtx.state==='suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(600,audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.1);
-        gain.gain.setValueAtTime(0.4,audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime+0.1);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(600,audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.1);
+    gain.gain.setValueAtTime(0.4,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime+0.1);
+}
+
+// CAPTURA FOTO
+document.getElementById('capture').onclick = () => {
+    if(photos.length>=MAX_PHOTOS){ alert("Máximo "+MAX_PHOTOS+" fotos por pedido."); return; }
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video,0,0);
+    
+    // Validación de blanco para color
+    let imgData = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+    let data = imgData.data;
+    let whitePixels=0;
+    for(let i=0;i<data.length;i+=4){
+        if(data[i]>200 && data[i+1]>200 && data[i+2]>200) whitePixels++;
     }
+    if(whitePixels<1000){ alert("Asegúrese de capturar bien el blanco del dispositivo."); return; }
 
-    // INICIALIZAR CÁMARA
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then(s => { video.srcObject = s; if(audioCtx.state==='suspended') audioCtx.resume(); })
-        .catch(err => { alert("Camera access is required to continue."); });
+    photos.push(canvas.toDataURL('image/jpeg',0.45));
+    renderPhotoList();
+    playCameraSound();
+};
 
-    // INICIAR SCANNER
-    init-btn.onclick = async () => {
-        audioCtx.resume();
-        if(!orientationActive){
-            if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
-                try { const res = await DeviceOrientationEvent.requestPermission(); if(res==='granted') window.addEventListener('deviceorientation', handleLevel); } catch(e){}
-            } else { window.addEventListener('deviceorientation', handleLevel); }
-            orientationActive = true;
-        }
-        startOverlay.style.display='none';
-    };
+function renderPhotoList(){
+    photoList.innerHTML="";
+    photos.forEach((p,i)=>{
+        let div = document.createElement('div');
+        div.className="photo-item";
+        let img = document.createElement('img');
+        img.src=p;
+        let del = document.createElement('button');
+        del.className="delete-btn";
+        del.innerText="X";
+        del.onclick=()=>{ photos.splice(i,1); renderPhotoList(); };
+        div.appendChild(img); div.appendChild(del);
+        photoList.appendChild(div);
+    });
+}
 
-    // NIVELADOR
-    function handleLevel(e){
-        const tilt = Math.abs(e.beta);
-        const side = Math.abs(e.gamma);
-        const isWall = tilt>75 && tilt<105 && side<8;
-        const isFlat = tilt<10 || tilt>170 && side<10;
-        isLevelValid = isWall||isFlat;
-        if(isLevelValid){ frame.style.borderColor="#00ff00"; frame.style.borderWidth="6px"; frame.style.boxShadow="0 0 25px #00ff00"; }
-        else { frame.style.borderColor="rgba(255,0,0,0.6)"; frame.style.borderWidth="4px"; frame.style.boxShadow="none"; }
-    }
+// FINALIZAR PEDIDO
+function finishOrder(orderID){
+    if(photos.length===0){ alert("Capture al menos una foto."); return; }
+    document.getElementById('loading').style.display='flex';
+    fetch(WEBAPP_URL,{
+        method:'POST',
+        mode:'no-cors',
+        body: JSON.stringify({ userName: orderID, photos: photos })
+    }).then(()=>{ window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + orderID; });
+}
 
-    // CAPTURA FOTO
-    captureBtn.onclick = () => {
-        if(!video.videoWidth) return;
-        if(!isLevelValid){
-            invalidText.style.display="block"; invalidText.style.opacity="1";
-            setTimeout(()=>{ invalidText.style.opacity="0"; setTimeout(()=>{ invalidText.style.display="none"; },500); },2000);
-            return;
-        }
-        if(photos.length>=MAX_PHOTOS){ alert("Maximum "+MAX_PHOTOS+" photos per order."); return; }
-        playCameraSound();
-        flash.style.opacity="1"; setTimeout(()=>{ flash.style.opacity="0"; },80);
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video,0,0);
-        photos.push(canvas.toDataURL('image/jpeg',0.45));
-        invalidText.style.display="none";
-        statusText.innerText="DEVICE SAVED.\nNEXT ONE!";
-        statusText.style.opacity="1";
-        setTimeout(()=>{ statusText.style.opacity="0"; },2000);
-        finishBtn.style.display="block";
-    };
-
-    // FINALIZAR PEDIDO
-    finishBtn.onclick = async () => {
-        if(!navigator.onLine){ alert("No internet connection detected."); return; }
-        if(photos.length===0){ alert("Please capture at least one image before finishing the order."); return; }
-        finishBtn.disabled=true;
-        document.getElementById('loading').style.display='flex';
-
-        try {
-            await fetch(WEBAPP_URL, {
-                method:'POST',
-                mode:'no-cors',
-                body: JSON.stringify({ userName: etyOrderID, photos: photos })
-            });
-
-            setTimeout(()=>{ window.location.href = GOOGLE_FORM + "?usp=pp_url&entry.ID_AQUI=" + etyOrderID; },1500);
-        } catch(err){
-            alert("Network error. Please check your connection.");
-            document.getElementById('loading').style.display='none';
-            finishBtn.disabled=false;
-        }
-    };
+// BOTONES SUPERIORES
+document.getElementById('back-btn').onclick = ()=>{ window.history.back(); };
+document.getElementById('close-btn').onclick = ()=>{ window.close(); };
 </script>
+
 </body>
 </html>
