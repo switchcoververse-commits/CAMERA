@@ -151,55 +151,79 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream=>{video.srcObject=stream;});
 
 
-// ===== SISTEMA ESTABLE 3 SEGUNDOS =====
+// ===== SENSOR PROFESIONAL =====
 
-let filteredBeta = 0;
-let filteredGamma = 0;
+let greenLock=false;
+let greenTimeout=null;
+let fx=0, fy=0, fz=0;
 
-let greenActive = false;
-let greenTimeout = null;
+const FILTER=0.85;
+const THRESHOLD=0.12; // tolerancia paralelismo
+const LOCK_TIME=2500;
 
-const ENTER_THRESHOLD = 5;
-const EXIT_THRESHOLD  = 12;
-const MIN_GREEN_TIME = 3000;
-
-window.addEventListener("deviceorientation", e=>{
-if(e.beta===null||e.gamma===null) return;
-
-const rawBeta = Math.abs(e.beta - 90);
-const rawGamma = Math.abs(e.gamma);
-
-// Filtro suavizado
-filteredBeta = filteredBeta * 0.85 + rawBeta * 0.15;
-filteredGamma = filteredGamma * 0.85 + rawGamma * 0.15;
-
-// ACTIVAR VERDE
-if(!greenActive && filteredBeta < ENTER_THRESHOLD && filteredGamma < ENTER_THRESHOLD){
-
-greenActive = true;
-isLevelStable = true;
-
-frame.style.borderColor = "#00ff00";
-frame.style.borderWidth = "6px";
-
-greenTimeout = setTimeout(()=>{
-greenActive = false;
-isLevelStable = false;
-frame.style.borderColor = "rgba(255,0,0,0.7)";
-frame.style.borderWidth = "4px";
-}, MIN_GREEN_TIME);
+async function enableMotion(){
+if(typeof DeviceMotionEvent !== "undefined" &&
+typeof DeviceMotionEvent.requestPermission === "function"){
+try{
+const permission=await DeviceMotionEvent.requestPermission();
+if(permission==="granted"){
+window.addEventListener("devicemotion",handleMotion);
+}
+}catch(e){}
+}else{
+window.addEventListener("devicemotion",handleMotion);
+}
 }
 
-// SALIR SOLO SI SE PIERDE CLARAMENTE EL NIVEL
-if(greenActive && (filteredBeta > EXIT_THRESHOLD || filteredGamma > EXIT_THRESHOLD)){
+function handleMotion(event){
+if(!event.accelerationIncludingGravity) return;
+
+let x=event.accelerationIncludingGravity.x;
+let y=event.accelerationIncludingGravity.y;
+let z=event.accelerationIncludingGravity.z;
+
+let norm=Math.sqrt(x*x+y*y+z*z);
+x/=norm; y/=norm; z/=norm;
+
+// FILTRO
+fx=fx*FILTER + x*(1-FILTER);
+fy=fy*FILTER + y*(1-FILTER);
+fz=fz*FILTER + z*(1-FILTER);
+
+// PARALELISMO:
+// pared → z cercano a 0
+// piso/techo → x,y cercanos a 0
+
+let wallParallel=Math.abs(fz)<THRESHOLD;
+let flatParallel=Math.abs(fx)<THRESHOLD && Math.abs(fy)<THRESHOLD;
+
+if(!greenLock && (wallParallel||flatParallel)){
+
+greenLock=true;
+isLevelStable=true;
+
+frame.style.borderColor="#00ff00";
+frame.style.borderWidth="6px";
+
+greenTimeout=setTimeout(()=>{
+greenLock=false;
+isLevelStable=false;
+frame.style.borderColor="rgba(255,0,0,0.7)";
+frame.style.borderWidth="4px";
+},LOCK_TIME);
+
+}
+
+if(greenLock && !(wallParallel||flatParallel)){
 clearTimeout(greenTimeout);
-greenActive = false;
-isLevelStable = false;
-frame.style.borderColor = "rgba(255,0,0,0.7)";
-frame.style.borderWidth = "4px";
+greenLock=false;
+isLevelStable=false;
+frame.style.borderColor="rgba(255,0,0,0.7)";
+frame.style.borderWidth="4px";
+}
 }
 
-});
+enableMotion();
 
 
 // ===== CAPTURA =====
