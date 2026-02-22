@@ -22,23 +22,14 @@ display:flex;
 flex-direction:column;
 }
 
-.header{
-text-align:center;
-padding:10px;
-color:#00d4ff;
-z-index:5;
-}
-
 .camera-container{
 position:relative;
 flex:1;
-display:flex;
-align-items:center;
-justify-content:center;
 overflow:hidden;
 }
 
 video{
+position:absolute;
 width:100%;
 height:100%;
 object-fit:cover;
@@ -57,15 +48,56 @@ transition:.25s ease;
 pointer-events:none;
 }
 
+/* MINIATURAS */
+.thumbnail-bar{
+position:fixed;
+left:0;
+right:0;
+bottom:calc(110px + env(safe-area-inset-bottom));
+display:flex;
+gap:10px;
+padding:10px;
+overflow-x:auto;
+background:rgba(0,0,0,.9);
+z-index:50;
+}
+
+.thumb-wrapper{
+position:relative;
+flex:0 0 auto;
+}
+
+.thumb-wrapper img{
+height:75px;
+border-radius:10px;
+display:block;
+}
+
+.delete-btn{
+position:absolute;
+top:-6px;
+right:-6px;
+background:red;
+color:white;
+border:none;
+border-radius:50%;
+width:22px;
+height:22px;
+font-size:14px;
+line-height:20px;
+padding:0;
+}
+
+/* CONTROLES */
 .controls{
 position:fixed;
-bottom:calc(15px + env(safe-area-inset-bottom));
 left:0;
-width:100%;
+right:0;
+bottom:calc(20px + env(safe-area-inset-bottom));
 display:flex;
 justify-content:center;
 gap:20px;
-z-index:20;
+z-index:60;
 }
 
 .shutter-btn{
@@ -84,49 +116,12 @@ border:none;
 border-radius:40px;
 font-weight:700;
 }
-
-.thumbnail-bar{
-position:fixed;
-bottom:calc(110px + env(safe-area-inset-bottom));
-left:0;
-width:100%;
-display:flex;
-overflow-x:auto;
-gap:10px;
-padding:8px;
-background:rgba(0,0,0,.85);
-z-index:15;
-}
-
-.thumb-wrapper{
-position:relative;
-}
-
-.thumb-wrapper img{
-height:70px;
-border-radius:8px;
-}
-
-.delete-btn{
-position:absolute;
-top:-5px;
-right:-5px;
-background:red;
-color:#fff;
-border:none;
-border-radius:50%;
-width:20px;
-height:20px;
-font-size:12px;
-}
 </style>
 </head>
 
 <body>
 
 <div class="scanner-wrapper">
-
-<div class="header">SCANNER READY</div>
 
 <div class="camera-container">
 <video id="video" autoplay playsinline muted></video>
@@ -150,32 +145,64 @@ const finishBtn=document.getElementById("finish");
 const thumbs=document.getElementById("thumbs");
 
 let photos=[];
-let stableCounter=0;
 let isLevelStable=false;
 
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream=>{video.srcObject=stream;});
 
-window.addEventListener("deviceorientation",e=>{
+
+// ===== SISTEMA ESTABLE 3 SEGUNDOS =====
+
+let filteredBeta = 0;
+let filteredGamma = 0;
+
+let greenActive = false;
+let greenTimeout = null;
+
+const ENTER_THRESHOLD = 5;
+const EXIT_THRESHOLD  = 12;
+const MIN_GREEN_TIME = 3000;
+
+window.addEventListener("deviceorientation", e=>{
 if(e.beta===null||e.gamma===null) return;
 
-const beta=Math.abs(e.beta-90);
-const gamma=Math.abs(e.gamma);
+const rawBeta = Math.abs(e.beta - 90);
+const rawGamma = Math.abs(e.gamma);
 
-if(beta<6 && gamma<6){
-stableCounter++;
-if(stableCounter>8){
-isLevelStable=true;
-frame.style.borderColor="#00ff00";
-frame.style.borderWidth="6px";
+// Filtro suavizado
+filteredBeta = filteredBeta * 0.85 + rawBeta * 0.15;
+filteredGamma = filteredGamma * 0.85 + rawGamma * 0.15;
+
+// ACTIVAR VERDE
+if(!greenActive && filteredBeta < ENTER_THRESHOLD && filteredGamma < ENTER_THRESHOLD){
+
+greenActive = true;
+isLevelStable = true;
+
+frame.style.borderColor = "#00ff00";
+frame.style.borderWidth = "6px";
+
+greenTimeout = setTimeout(()=>{
+greenActive = false;
+isLevelStable = false;
+frame.style.borderColor = "rgba(255,0,0,0.7)";
+frame.style.borderWidth = "4px";
+}, MIN_GREEN_TIME);
 }
-}else{
-stableCounter=0;
-isLevelStable=false;
-frame.style.borderColor="rgba(255,0,0,0.7)";
-frame.style.borderWidth="4px";
+
+// SALIR SOLO SI SE PIERDE CLARAMENTE EL NIVEL
+if(greenActive && (filteredBeta > EXIT_THRESHOLD || filteredGamma > EXIT_THRESHOLD)){
+clearTimeout(greenTimeout);
+greenActive = false;
+isLevelStable = false;
+frame.style.borderColor = "rgba(255,0,0,0.7)";
+frame.style.borderWidth = "4px";
 }
+
 });
+
+
+// ===== CAPTURA =====
 
 captureBtn.addEventListener("click",e=>{
 e.preventDefault();
