@@ -30,9 +30,9 @@
 <body>
 
 <div id="sensor-auth">
-    <h2 style="margin-bottom: 10px;">Calibración de Perspectiva</h2>
-    <p>Para asegurar el clonado de textura exacto, se requiere acceso a los sensores de inclinación.</p>
-    <button id="auth-btn">PERMITIR Y COMENZAR</button>
+    <h2 style="margin-bottom: 10px;">Calibración de Perspectiva Pro</h2>
+    <p>Activando niveladores para Paredes, Suelos y Techos.</p>
+    <button id="auth-btn">COMENZAR CAPTURA</button>
 </div>
 
 <div id="camera-container">
@@ -89,15 +89,13 @@
                 camContainer.style.visibility = 'visible';
                 startBufferProcessing();
             };
-        } catch (err) {
-            alert("Error: Se requiere permiso de cámara.");
-        }
+        } catch (err) { alert("Error de cámara."); }
     }
 
     function startBufferProcessing() {
         const ctx = canvas.getContext('2d');
         const process = () => {
-            if (isLeveled) {
+            if (isLeveled || isLockActive) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0);
@@ -120,10 +118,14 @@
         const x = event.beta;  
         const y = event.gamma; 
         
+        // PARED (Vertical): Beta ~90, Gamma ~0
         const checkWall = (Math.abs(x - 90) < 2.5 && Math.abs(y) < 2.5);
+        // SUELO (Plano boca arriba): Beta ~0, Gamma ~0
         const checkFloor = (Math.abs(x) < 2.5 && Math.abs(y) < 2.5);
+        // TECHO (Plano boca abajo): Beta ~180 o ~-180, Gamma ~0
+        const checkCeiling = (Math.abs(Math.abs(x) - 180) < 2.5 && Math.abs(y) < 2.5);
 
-        if (checkWall || checkFloor) {
+        if (checkWall || checkFloor || checkCeiling) {
             isLeveled = true;
             isLockActive = true;
             updateUI("#00ff00");
@@ -131,8 +133,7 @@
             if (lockTimer) clearTimeout(lockTimer);
             lockTimer = setTimeout(() => {
                 isLockActive = false;
-                // Forzar re-evaluación inmediata al terminar el bloqueo
-                isLeveled = false; 
+                isLeveled = false;
             }, 3000);
         } else {
             isLeveled = false;
@@ -142,19 +143,12 @@
 
     authBtn.addEventListener('click', () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(state => {
-                    if (state === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                        initCamera();
-                    } else {
-                        alert("Permiso de sensores denegado.");
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
+            DeviceOrientationEvent.requestPermission().then(state => {
+                if (state === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation, true);
                     initCamera();
-                });
+                }
+            }).catch(initCamera);
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
             initCamera();
@@ -191,7 +185,6 @@
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
         renderThumbnails();
     };
-
 </script>
 </body>
 </html>
