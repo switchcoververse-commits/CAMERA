@@ -3,14 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Pro V8.2 - Hilo de Ariadna</title>
+<title>Scanner Pro V9.0 - Hilo de Ariadna</title>
 <style>
 body { margin:0; font-family:-apple-system, sans-serif; background:#000; color:#fff; overflow:hidden; }
-.scanner-wrapper { position: relative; width:100vw; height:100vh; display:flex; flex-direction:column; align-items:center; }
-.header { width:100%; padding:10px 0; text-align:center; z-index:50; position:relative; }
-.header h2 { margin:0; font-size:18px; color:#00d4ff; letter-spacing:2px; }
 
-/* Overlay inicio con fondo negro y spinner verde */
 #start-overlay {
     position: fixed;
     top:0; left:0;
@@ -22,177 +18,145 @@ body { margin:0; font-family:-apple-system, sans-serif; background:#000; color:#
     justify-content:center;
     background: rgba(0,0,0,0.85);
 }
-.spinner-overlay {
-    width:50px; height:50px;
-    border:6px solid #222;
-    border-top:6px solid #00ff00;
-    border-radius:50%;
-    animation:spin 1s linear infinite;
-    margin-bottom:20px;
-}
-@keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
-#start-overlay button {
-    padding:12px 25px;
-    border:none;
-    border-radius:50px;
-    background:#00d4ff;
-    color:#000;
-    font-weight:900;
-    cursor:pointer;
-    font-size:16px;
-    box-shadow:0 0 15px rgba(0,212,255,0.5);
-    margin-top:10px;
-}
-#start-overlay p {
-    color:#fff;
-    font-weight:900;
-    text-align:center;
-    margin:10px 0;
-}
 
-.camera-container { position:relative; width:100%; flex:1; display:flex; align-items:center; justify-content:center; z-index:10; }
-video { width:90%; max-width:500px; height:auto; border-radius:20px; object-fit:cover; box-shadow:0 0 20px rgba(0,255,0,0.5); }
-.scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:75%; height:55%; border:4px solid rgba(255,0,0,0.6); border-radius:25px; pointer-events:none; transition:all 0.3s ease; }
-#flash { position:absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; z-index:30; pointer-events:none; }
-.controls { width:100%; padding:10px 0; display:flex; justify-content:center; gap:20px; position:relative; z-index:50; }
-.shutter-btn { width:80px; height:80px; background:white; border-radius:50%; border:6px solid #333; cursor:pointer; box-shadow:0 0 15px rgba(0,255,0,0.5); display:none; }
+#start-overlay h2 { color:#00d4ff; margin-bottom:20px; }
+#start-overlay button { background:#00d4ff; color:#000; padding:20px 50px; border:none; border-radius:60px; font-weight:900; font-size:22px; cursor:pointer; }
+
+.viewport { position:relative; width:100vw; height:70vh; display:flex; justify-content:center; align-items:center; }
+video { width:90%; height:auto; border-radius:15px; object-fit:cover; }
+
+.scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:75%; height:55%; border:4px solid rgba(255,0,0,0.6); border-radius:25px; pointer-events:none; transition: all 0.5s ease; }
+
+#flash { position:absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; z-index:50; pointer-events:none; }
+
+.controls { width:100%; display:flex; justify-content:center; gap:20px; padding:10px 0; position:relative; z-index:50; }
+.shutter-btn { width:80px; height:80px; background:white; border-radius:50%; border:6px solid #333; cursor:pointer; display:none; }
 .btn-finish { display:none; padding:12px 30px; background:#00ff00; color:#000; border:none; font-weight:900; border-radius:50px; font-size:16px; cursor:pointer; animation:pulse 2s infinite; }
-@keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
 
-.status-text, .invalid-text { position:absolute; top:10%; left:50%; transform:translateX(-50%); font-weight:900; text-align:center; font-size:24px; opacity:0; transition:opacity 0.8s ease; z-index:60; }
-.status-text { color:#00ff00; text-shadow:0 0 15px rgba(0,0,0,1); }
-.invalid-text { color:#ff3333; text-shadow:0 0 15px rgba(0,0,0,1); }
+@keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.05);}100%{transform:scale(1);} }
 
-#loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
 .spinner { width:50px; height:50px; border:6px solid #222; border-top:6px solid #00ff00; border-radius:50%; animation:spin 1s linear infinite; }
+@keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+.status-text, .invalid-text { position:absolute; top:10%; left:50%; transform:translateX(-50%); font-weight:900; font-size:24px; opacity:0; text-align:center; transition:opacity 0.8s ease; z-index:60; }
+.status-text { color:#00ff00; text-shadow:0 0 15px rgba(0,0,0,1);}
+.invalid-text { color:#ff3333; text-shadow:0 0 15px rgba(0,0,0,1);}
 </style>
 </head>
 <body>
 
-<div class="scanner-wrapper">
-
-<div class="header">
-<h2 id="order-display">SCANNER READY</h2>
-<p id="order-number"></p>
-</div>
-
-<!-- Overlay inicial -->
 <div id="start-overlay">
-<div class="spinner-overlay"></div>
-<p>Align your device inside the frame and press Start Scanner</p>
-<button id="init-btn">START SCANNER</button>
+    <h2>Align your device inside the frame and press Start Scanner</h2>
+    <button id="init-btn">START SCANNER</button>
 </div>
 
-<div class="camera-container">
-<video id="video" autoplay playsinline muted></video>
-<div class="scanner-frame" id="frame"></div>
-<div id="flash"></div>
-<div class="status-text" id="status-text">DEVICE SAVED.<br>NEXT ONE!</div>
-<div class="invalid-text" id="invalid-text">INVALID PHOTO<br>PLEASE ALIGN DEVICE</div>
+<div class="viewport">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="scanner-frame" id="frame"></div>
+    <div id="flash"></div>
+    <div class="status-text" id="status-text">DEVICE SAVED.<br>NEXT ONE!</div>
+    <div class="invalid-text" id="invalid-text">INVALID PHOTO<br>PLEASE ALIGN DEVICE</div>
 </div>
 
 <div class="controls">
-<div class="shutter-btn" id="capture"></div>
-<button id="finish" class="btn-finish">DONE: FINISH ORDER</button>
-</div>
-
+    <div class="shutter-btn" id="capture"></div>
+    <button id="finish" class="btn-finish">DONE: FINISH ORDER</button>
 </div>
 
 <div id="loading">
-<div class="spinner"></div>
-<p style="margin-top:20px; font-weight:900; color:#00ff00; font-size:18px;">SENDING TO DRIVE...</p>
+    <div class="spinner"></div>
+    <p style="margin-top:20px; font-weight:900; color:#00ff00; font-size:18px;">SENDING TO DRIVE...</p>
 </div>
 
 <script>
-window.addEventListener('load', function(){
+window.addEventListener('load', function() {
+    const WEBAPP_URL = "https://script.google.com/macros/s/YOUR_WEBAPP_ID/exec";
+    const GOOGLE_FORM = "https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform";
+    const MAX_PHOTOS = 30;
+    let photos = [], isLevelValid=false, orientationActive=false;
 
-const WEBAPP_URL = "https://script.google.com/macros/s/YOUR_WEBAPP_ID/exec";
-const GOOGLE_FORM = "https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform";
+    const video = document.getElementById('video');
+    const frame = document.getElementById('frame');
+    const startOverlayBtn = document.getElementById('init-btn');
+    const captureBtn = document.getElementById('capture');
+    const finishBtn = document.getElementById('finish');
+    const canvas = document.createElement('canvas');
+    const flash = document.getElementById('flash');
+    const statusText = document.getElementById('status-text');
+    const invalidText = document.getElementById('invalid-text');
 
-const MAX_PHOTOS = 30;
-let isLevelValid=false, photos=[], orientationActive=false;
+    const urlParams = new URLSearchParams(window.location.search);
+    const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2,6).toUpperCase();
 
-const video=document.getElementById('video');
-const frame=document.getElementById('frame');
-const startOverlayBtn=document.getElementById('init-btn');
-const overlay=document.getElementById('start-overlay');
-const captureBtn=document.getElementById('capture');
-const finishBtn=document.getElementById('finish');
-const canvas=document.createElement('canvas');
-const flash=document.getElementById('flash');
-const statusText=document.getElementById('status-text');
-const invalidText=document.getElementById('invalid-text');
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-const urlParams=new URLSearchParams(window.location.search);
-const etyOrderID=urlParams.get('order') || "MANUAL_"+Math.random().toString(36).substring(2,6).toUpperCase();
-document.getElementById('order-number').innerText="ORDER ID: "+etyOrderID;
+    function playCameraSound(){
+        if(audioCtx.state==='suspended') audioCtx.resume();
+        const osc=audioCtx.createOscillator();
+        const gain=audioCtx.createGain();
+        osc.frequency.setValueAtTime(600,audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.1);
+        gain.gain.setValueAtTime(0.4,audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime+0.1);
+    }
 
-finishBtn.style.display='none';
-captureBtn.style.display='none';
+    function handleLevel(e){
+        const tilt=Math.abs(e.beta), side=Math.abs(e.gamma);
+        const isWall=(tilt>75 && tilt<105 && side<8);
+        const isFlat=(tilt<10||tilt>170)&&(side<10);
+        isLevelValid = (isWall||isFlat);
+        frame.style.borderColor = isLevelValid ? "#00ff00" : "rgba(255,0,0,0.6)";
+        frame.style.borderWidth = isLevelValid ? "6px" : "4px";
+        frame.style.boxShadow = isLevelValid ? "0 0 25px #00ff00" : "none";
+    }
 
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-function playCameraSound(){
-if(audioCtx.state==='suspended') audioCtx.resume();
-const osc=audioCtx.createOscillator();
-const gain=audioCtx.createGain();
-osc.frequency.setValueAtTime(600,audioCtx.currentTime);
-osc.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.1);
-gain.gain.setValueAtTime(0.4,audioCtx.currentTime);
-gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);
-osc.connect(gain); gain.connect(audioCtx.destination);
-osc.start(); osc.stop(audioCtx.currentTime+0.1);
-}
+    startOverlayBtn.onclick = async () => {
+        audioCtx.resume();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+            video.srcObject = stream;
+        } catch(err){ alert("Camera access required."); }
+        startOverlayBtn.parentElement.style.display='none';
+        captureBtn.style.display='block';
+        if(!orientationActive){
+            if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+                try {
+                    const res = await DeviceOrientationEvent.requestPermission();
+                    if(res==='granted') window.addEventListener('deviceorientation', handleLevel);
+                } catch(e){}
+            } else { window.addEventListener('deviceorientation', handleLevel); }
+            orientationActive=true;
+        }
+    };
 
-startOverlayBtn.onclick=async()=>{
-audioCtx.resume();
-try{
-const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-video.srcObject=stream;
-captureBtn.style.display='inline-block';
-finishBtn.style.display='inline-block';
-overlay.style.display='none';
-}catch(err){ alert("Camera access required."); return; }
+    captureBtn.onclick = () => {
+        if(!video.videoWidth) return;
+        if(!isLevelValid){ invalidText.style.opacity='1'; setTimeout(()=>{ invalidText.style.opacity='0'; },2000); return; }
+        if(photos.length>=MAX_PHOTOS){ alert("Maximum " + MAX_PHOTOS + " photos per order."); return; }
+        playCameraSound();
+        flash.style.opacity='1'; setTimeout(()=>{ flash.style.opacity='0'; },80);
+        canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+        canvas.getContext('2d').drawImage(video,0,0);
+        photos.push(canvas.toDataURL('image/jpeg',0.45));
+        statusText.style.opacity='1'; setTimeout(()=>{ statusText.style.opacity='0'; },2000);
+        finishBtn.style.display='inline-block';
+    };
 
-if(!orientationActive){
-if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
-try{ const res=await DeviceOrientationEvent.requestPermission(); if(res==='granted') window.addEventListener('deviceorientation',handleLevel); }catch(e){}
-}else{ window.addEventListener('deviceorientation',handleLevel); }
-orientationActive=true;
-}
-};
-
-function handleLevel(e){
-const tilt=Math.abs(e.beta), side=Math.abs(e.gamma);
-const isWall=(tilt>85 && tilt<95 && side<8);
-const isFlat=(tilt<10||tilt>170)&&(side<10);
-isLevelValid=(isWall||isFlat);
-if(isLevelValid){ frame.style.borderColor="#00ff00"; frame.style.borderWidth="6px"; frame.style.boxShadow="0 0 25px #00ff00"; }
-else{ frame.style.borderColor="rgba(255,0,0,0.6)"; frame.style.borderWidth="4px"; frame.style.boxShadow="none"; }
-}
-
-captureBtn.onclick=()=>{
-if(!video.videoWidth) return;
-if(!isLevelValid){ invalidText.style.opacity='1'; setTimeout(()=>{invalidText.style.opacity='0';},2000); return; }
-if(photos.length>=MAX_PHOTOS){ alert("Maximum "+MAX_PHOTOS+" photos per order."); return; }
-playCameraSound();
-flash.style.opacity='1'; setTimeout(()=>{flash.style.opacity='0';},80);
-canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-canvas.getContext('2d').drawImage(video,0,0);
-photos.push(canvas.toDataURL('image/jpeg',0.45));
-statusText.style.opacity='1'; setTimeout(()=>{statusText.style.opacity='0';},2000);
-};
-
-finishBtn.onclick=async()=>{
-if(!navigator.onLine){ alert("No internet connection"); return; }
-if(photos.length===0){ alert("Capture at least one photo"); return; }
-finishBtn.disabled=true; document.getElementById('loading').style.display='flex';
-try{ await fetch(WEBAPP_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({userName:etyOrderID,photos:photos})});
-setTimeout(()=>{window.location.href=GOOGLE_FORM+"?usp=pp_url&entry.ID_AQUI="+etyOrderID;},1500);
-}catch(err){ alert("Network error"); document.getElementById('loading').style.display='none'; finishBtn.disabled=false; }
-};
+    finishBtn.onclick = async () => {
+        if(!navigator.onLine){ alert("No internet connection"); return; }
+        if(photos.length===0){ alert("Capture at least one photo"); return; }
+        finishBtn.disabled=true;
+        document.getElementById('loading').style.display='flex';
+        try {
+            await fetch(WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify({ userName: etyOrderID, photos:photos }) });
+            setTimeout(()=>{ window.location.href=GOOGLE_FORM+"?usp=pp_url&entry.ID_AQUI="+etyOrderID; },1500);
+        } catch(err){ alert("Network error"); document.getElementById('loading').style.display='none'; finishBtn.disabled=false; }
+    };
 
 });
 </script>
-
 </body>
 </html>
