@@ -8,12 +8,10 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Header */
         .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; }
         .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
         .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Galería de miniaturas */
         #thumbnail-bar { 
             background: rgba(40, 40, 40, 0.8); 
             margin: 0 20px; 
@@ -33,7 +31,6 @@
             border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold;
         }
 
-        /* Viewport y Marco de Nivelación */
         #viewport { 
             position: relative; 
             flex-grow: 1; 
@@ -43,28 +40,25 @@
             margin: 10px 20px; 
             overflow: hidden; 
             border-radius: 12px;
-            border: 8px solid #ff0000; /* Marco inicial Rojo */
-            transition: border-color 0.2s ease;
+            border: 8px solid #ff0000;
+            transition: border-color 0.1s ease;
         }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Cruz Central */
         #crosshair {
             position: absolute;
             width: 50px;
             height: 50px;
             pointer-events: none;
         }
-        #crosshair::before, #crosshair::after {
-            content: '';
+        .cross-line {
             position: absolute;
-            background: #ff0000; /* Cruz inicial Roja */
-            transition: background 0.2s ease;
+            background: #ff0000;
+            transition: background 0.1s ease;
         }
-        #crosshair::before { top: 24px; left: 0; width: 100%; height: 3px; }
-        #crosshair::after { left: 24px; top: 0; width: 3px; height: 100%; }
+        .v-line { left: 24px; top: 0; width: 3px; height: 100%; }
+        .h-line { top: 24px; left: 0; width: 100%; height: 3px; }
 
-        /* Footer */
         .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; }
         #shutter { 
             width: 70px; 
@@ -93,7 +87,10 @@
 
     <div id="viewport">
         <video id="video" autoplay playsinline></video>
-        <div id="crosshair"></div>
+        <div id="crosshair">
+            <div class="cross-line v-line" id="v-line"></div>
+            <div class="cross-line h-line" id="h-line"></div>
+        </div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
@@ -113,8 +110,12 @@
     const thumbBar = document.getElementById('thumbnail-bar');
     const finishBtn = document.getElementById('finish-btn');
     const viewport = document.getElementById('viewport');
-    const crosshair = document.getElementById('crosshair');
+    const vLine = document.getElementById('v-line');
+    const hLine = document.getElementById('h-line');
+    
     let capturedPhotos = [];
+    let isLocked = false;
+    let lockTimeout = null;
 
     async function initCamera() {
         try {
@@ -127,22 +128,33 @@
         }
     }
 
-    // Lógica de nivelación Marco y Cruz
+    function setLevelColor(color) {
+        viewport.style.borderColor = color;
+        vLine.style.background = color;
+        hLine.style.background = color;
+    }
+
     window.addEventListener('deviceorientation', (event) => {
-        const beta = event.beta;  // Inclinación X
-        const gamma = event.gamma; // Inclinación Y
+        if (isLocked) return; // Bloqueo de micromovimientos activado
+
+        const beta = event.beta; 
+        const gamma = event.gamma; 
         
-        // Umbral de precisión: +/- 3 grados para posición "Nivelada"
+        // Detección de posición nivelada (umbral de 3 grados)
         const isLeveled = (Math.abs(gamma) < 3 && Math.abs(beta - 90) < 3);
 
         if (isLeveled) {
-            viewport.style.borderColor = "#00ff00"; // Verde
-            document.styleSheets[0].addRule('#crosshair::before', 'background: #00ff00 !important');
-            document.styleSheets[0].addRule('#crosshair::after', 'background: #00ff00 !important');
+            isLocked = true;
+            setLevelColor("#00ff00"); // Verde
+
+            // Mantener estado verde durante 3 segundos
+            if (lockTimeout) clearTimeout(lockTimeout);
+            lockTimeout = setTimeout(() => {
+                isLocked = false;
+                // Al terminar los 3s, se reevalúa la posición en el siguiente evento
+            }, 3000);
         } else {
-            viewport.style.borderColor = "#ff0000"; // Rojo
-            document.styleSheets[0].addRule('#crosshair::before', 'background: #ff0000 !important');
-            document.styleSheets[0].addRule('#crosshair::after', 'background: #ff0000 !important');
+            setLevelColor("#ff0000"); // Rojo
         }
     });
 
@@ -153,8 +165,7 @@
         canvas.getContext('2d').drawImage(video, 0, 0);
         
         const imageData = canvas.toDataURL('image/jpeg', 0.9);
-        const photoId = Date.now();
-        capturedPhotos.push({ id: photoId, data: imageData });
+        capturedPhotos.push({ id: Date.now(), data: imageData });
         
         renderThumbnails();
     });
@@ -164,10 +175,7 @@
         capturedPhotos.forEach((photo) => {
             const container = document.createElement('div');
             container.className = 'thumb-container';
-            container.innerHTML = `
-                <img src="${photo.data}" class="thumb-img">
-                <button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>
-            `;
+            container.innerHTML = `<img src="${photo.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>`;
             thumbBar.appendChild(container);
         });
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
@@ -180,8 +188,7 @@
     };
 
     finishBtn.addEventListener('click', () => {
-        alert("Enviando " + capturedPhotos.length + " imágenes a producción.");
-        // Integración con Web App pendiente de URL
+        alert("Enviando " + capturedPhotos.length + " imágenes.");
     });
 
     initCamera();
