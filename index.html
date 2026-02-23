@@ -1,219 +1,182 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Stable V1</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cámara Camuflaje Pro</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
+        #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; z-index: 10; }
+        .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; }
+        
+        /* Galería de miniaturas (Zona Cargando cámara) */
+        #thumbnail-bar { 
+            background: rgba(40, 40, 40, 0.8); 
+            margin: 0 20px; 
+            border-radius: 8px; 
+            height: 80px; 
+            display: flex; 
+            align-items: center; 
+            padding: 5px 10px; 
+            overflow-x: auto; 
+            gap: 10px;
+        }
+        .thumb-container { position: relative; min-width: 60px; height: 60px; }
+        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
+        .remove-thumb { 
+            position: absolute; top: -5px; right: -5px; background: red; color: white; 
+            border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; 
+        }
 
-<style>
-html,body{
-margin:0;
-padding:0;
-background:#000;
-font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-overflow:hidden;
-}
+        /* Video y Nivel */
+        #viewport { position: relative; flex-grow: 1; display: flex; justify-content: center; align-items: center; margin: 20px; overflow: hidden; border-radius: 12px; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        #level-indicator { 
+            position: absolute; width: 40px; height: 40px; border: 2px solid #fff; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; pointer-events: none;
+        }
+        #level-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; transition: all 0.1s ease; }
 
-#overlay{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-z-index:9999;
-}
-
-#overlay button{
-padding:20px 50px;
-font-size:22px;
-font-weight:900;
-border-radius:50px;
-border:none;
-background:#00d4ff;
-color:#000;
-}
-
-#video{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-object-fit:cover;
-display:none;
-}
-
-#frame{
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-width:80%;
-height:60%;
-border:5px solid red;
-border-radius:25px;
-pointer-events:none;
-display:none;
-transition:0.3s;
-}
-
-#controls{
-position:fixed;
-bottom:30px;
-width:100%;
-display:flex;
-justify-content:center;
-gap:20px;
-display:none;
-}
-
-#capture{
-width:80px;
-height:80px;
-border-radius:50%;
-background:white;
-border:6px solid #333;
-}
-
-#finish{
-padding:12px 30px;
-background:#00ff00;
-border:none;
-border-radius:40px;
-font-weight:900;
-}
-
-#loading{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:black;
-display:none;
-justify-content:center;
-align-items:center;
-z-index:10000;
-color:#00ff00;
-font-weight:900;
-font-size:20px;
-}
-</style>
+        /* Footer y Controles */
+        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; gap: 20px; }
+        .controls { display: flex; align-items: center; gap: 40px; }
+        #shutter { width: 80px; height: 80px; background: #555; border: 5px solid #fff; border-radius: 50%; cursor: pointer; }
+        #shutter:active { transform: scale(0.9); }
+        .flash-btn { font-size: 24px; background: none; border: none; color: #fff; }
+        #finish-btn { 
+            background: #fff; color: #000; border: none; padding: 12px 30px; 
+            border-radius: 25px; font-weight: bold; cursor: pointer; display: none;
+        }
+    </style>
 </head>
-
 <body>
 
-<div id="overlay">
-<h2 style="color:#00d4ff;">Align device and press Start</h2>
-<button id="startBtn">START SCANNER</button>
+<div id="camera-container">
+    <div class="header">
+        <a href="https://tu-tienda-etsy.com" class="back-btn">&lt;</a>
+        <div style="width: 24px;"></div>
+    </div>
+
+    <div id="thumbnail-bar">
+        </div>
+
+    <div id="viewport">
+        <video id="video" autoplay playsinline></video>
+        <div id="level-indicator">
+            <div id="level-dot"></div>
+        </div>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+    <div class="footer">
+        <button id="finish-btn">FINALIZAR ORDEN</button>
+        <div class="controls">
+            <div style="width: 24px;"></div>
+            <div id="shutter"></div>
+            <button class="flash-btn">⚡</button>
+        </div>
+    </div>
 </div>
 
-<video id="video" playsinline autoplay muted></video>
-<div id="frame"></div>
-
-<div id="controls">
-<div id="capture"></div>
-<button id="finish">FINISH</button>
-</div>
-
-<div id="loading">SENDING TO DRIVE...</div>
+<audio id="shutter-sound" src="https://www.soundjay.com/camera/sounds/camera-shutter-click-01.mp3"></audio>
 
 <script>
-window.addEventListener("load",function(){
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const shutter = document.getElementById('shutter');
+    const shutterSound = document.getElementById('shutter-sound');
+    const thumbBar = document.getElementById('thumbnail-bar');
+    const finishBtn = document.getElementById('finish-btn');
+    const levelDot = document.getElementById('level-dot');
+    let capturedPhotos = [];
 
-const video=document.getElementById("video");
-const frame=document.getElementById("frame");
-const startBtn=document.getElementById("startBtn");
-const overlay=document.getElementById("overlay");
-const controls=document.getElementById("controls");
-const capture=document.getElementById("capture");
-const finish=document.getElementById("finish");
-const loading=document.getElementById("loading");
+    // Iniciar Cámara
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            console.error("Error acceso cámara: ", err);
+        }
+    }
 
-let stream=null;
-let photos=[];
-let levelOK=false;
-const MAX_PHOTOS=30;
-const WEBAPP_URL="YOUR_WEBAPP_URL_HERE";
+    // Lógica de Nivelación (Acelerómetro)
+    window.addEventListener('deviceorientation', (event) => {
+        const beta = event.beta;  // Inclinación adelante/atrás (-180 a 180)
+        const gamma = event.gamma; // Inclinación izquierda/derecha (-90 a 90)
+        
+        // Mapeo de movimiento del punto verde
+        let x = Math.min(Math.max(gamma, -20), 20) * 1;
+        let y = Math.min(Math.max(beta - 90, -20), 20) * 1; 
+        
+        levelDot.style.transform = `translate(${x}px, ${y}px)`;
+        
+        // Indicador visual de nivel perfecto
+        if (Math.abs(gamma) < 2 && Math.abs(beta - 90) < 2) {
+            levelDot.style.background = "#0f0";
+            levelDot.style.boxShadow = "0 0 10px #0f0";
+        } else {
+            levelDot.style.background = "red";
+            levelDot.style.boxShadow = "none";
+        }
+    });
 
-function initOrientation(){
-if(window.DeviceOrientationEvent){
-window.addEventListener("deviceorientation",function(e){
+    // Captura de Foto
+    shutter.addEventListener('click', () => {
+        shutterSound.play();
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        const imageData = canvas.toDataURL('image/jpeg', 1.0);
+        const photoId = Date.now();
+        capturedPhotos.push({ id: photoId, data: imageData });
+        
+        renderThumbnails();
+    });
 
-if(e.beta===null || e.gamma===null){return;}
+    // Renderizar Miniaturas
+    function renderThumbnails() {
+        thumbBar.innerHTML = '';
+        capturedPhotos.forEach((photo, index) => {
+            const container = document.createElement('div');
+            container.className = 'thumb-container';
+            
+            container.innerHTML = `
+                <img src="${photo.data}" class="thumb-img">
+                <button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>
+            `;
+            thumbBar.appendChild(container);
+        });
+        
+        finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
+        thumbBar.scrollLeft = thumbBar.scrollWidth;
+    }
 
-let beta=Math.abs(e.beta);
-let gamma=Math.abs(e.gamma);
+    // Eliminar Foto
+    window.removePhoto = function(id) {
+        capturedPhotos = capturedPhotos.filter(p => p.id !== id);
+        renderThumbnails();
+    };
 
-let wall=(beta>80 && beta<100 && gamma<10);
-let flat=(beta<10 && gamma<10);
+    // Finalizar Orden
+    finishBtn.addEventListener('click', () => {
+        // Estructura lista para envío HTTP a Make/Apps Script
+        const orderData = {
+            order_id: "ETSY_" + Date.now(),
+            photos: capturedPhotos,
+            timestamp: new Date().toISOString()
+        };
+        console.log("Orden lista para enviar:", orderData);
+        alert("Orden finalizada. Iniciando carga de " + capturedPhotos.length + " imágenes.");
+    });
 
-if(wall || flat){
-frame.style.borderColor="#00ff00";
-levelOK=true;
-}else{
-frame.style.borderColor="red";
-levelOK=false;
-}
-
-});
-}
-}
-
-async function startCamera(){
-stream=await navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"},
-audio:false
-});
-video.srcObject=stream;
-video.style.display="block";
-frame.style.display="block";
-controls.style.display="flex";
-overlay.style.display="none";
-initOrientation();
-}
-
-startBtn.addEventListener("click",function(){
-startCamera();
-});
-
-capture.addEventListener("click",function(){
-
-if(!levelOK){return;}
-if(photos.length>=MAX_PHOTOS){return;}
-
-let canvas=document.createElement("canvas");
-canvas.width=video.videoWidth;
-canvas.height=video.videoHeight;
-canvas.getContext("2d").drawImage(video,0,0);
-photos.push(canvas.toDataURL("image/jpeg",0.6));
-
-});
-
-finish.addEventListener("click",async function(){
-
-if(photos.length===0){return;}
-
-loading.style.display="flex";
-
-await fetch(WEBAPP_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({photos:photos})
-});
-
-loading.style.display="none";
-alert("DONE");
-
-});
-
-});
+    initCamera();
 </script>
-
 </body>
 </html>
