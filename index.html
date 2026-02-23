@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Stable V2</title>
+<title>Scanner Stable V1</title>
 
 <style>
 html,body{
@@ -59,17 +59,17 @@ border:5px solid red;
 border-radius:25px;
 pointer-events:none;
 display:none;
-transition:0.2s;
+transition:0.3s;
 }
 
 #controls{
 position:fixed;
 bottom:30px;
 width:100%;
-display:none;
+display:flex;
 justify-content:center;
 gap:20px;
-z-index:10;
+display:none;
 }
 
 #capture{
@@ -113,7 +113,7 @@ font-size:20px;
 <button id="startBtn">START SCANNER</button>
 </div>
 
-<video id="video" playsinline muted></video>
+<video id="video" playsinline autoplay muted></video>
 <div id="frame"></div>
 
 <div id="controls">
@@ -138,74 +138,44 @@ const loading=document.getElementById("loading");
 let stream=null;
 let photos=[];
 let levelOK=false;
-let orientationActive=false;
 const MAX_PHOTOS=30;
 const WEBAPP_URL="YOUR_WEBAPP_URL_HERE";
 
-function activateLeveler(){
+function initOrientation(){
+if(window.DeviceOrientationEvent){
+window.addEventListener("deviceorientation",function(e){
 
-if(orientationActive) return;
+if(e.beta===null || e.gamma===null){return;}
 
-if(typeof DeviceOrientationEvent !== "undefined" &&
-typeof DeviceOrientationEvent.requestPermission === "function"){
+let beta=Math.abs(e.beta);
+let gamma=Math.abs(e.gamma);
 
-DeviceOrientationEvent.requestPermission().then(response=>{
-if(response==="granted"){
-window.addEventListener("deviceorientation",handleOrientation,true);
-orientationActive=true;
-}
-}).catch(()=>{});
-
-}else{
-window.addEventListener("deviceorientation",handleOrientation,true);
-orientationActive=true;
-}
-}
-
-function handleOrientation(event){
-
-if(event.beta===null || event.gamma===null) return;
-
-let beta=Math.abs(event.beta);
-let gamma=Math.abs(event.gamma);
-
-let wall=(beta>80 && beta<100 && gamma<8);
-let flat=(beta<8 || beta>172) && gamma<8;
+let wall=(beta>80 && beta<100 && gamma<10);
+let flat=(beta<10 && gamma<10);
 
 if(wall || flat){
 frame.style.borderColor="#00ff00";
-frame.style.boxShadow="0 0 20px #00ff00";
 levelOK=true;
 }else{
 frame.style.borderColor="red";
-frame.style.boxShadow="none";
 levelOK=false;
+}
+
+});
 }
 }
 
 async function startCamera(){
-
-try{
 stream=await navigator.mediaDevices.getUserMedia({
-video:{facingMode:{exact:"environment"}},
+video:{facingMode:"environment"},
 audio:false
 });
-}catch{
-stream=await navigator.mediaDevices.getUserMedia({
-video:true,
-audio:false
-});
-}
-
 video.srcObject=stream;
-await video.play();
-
-overlay.style.display="none";
 video.style.display="block";
 frame.style.display="block";
 controls.style.display="flex";
-
-activateLeveler();
+overlay.style.display="none";
+initOrientation();
 }
 
 startBtn.addEventListener("click",function(){
@@ -214,37 +184,32 @@ startCamera();
 
 capture.addEventListener("click",function(){
 
-if(!levelOK) return;
-if(photos.length>=MAX_PHOTOS) return;
+if(!levelOK){return;}
+if(photos.length>=MAX_PHOTOS){return;}
 
 let canvas=document.createElement("canvas");
 canvas.width=video.videoWidth;
 canvas.height=video.videoHeight;
-
-let ctx=canvas.getContext("2d");
-ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-let img=canvas.toDataURL("image/jpeg",0.7);
-photos.push(img);
+canvas.getContext("2d").drawImage(video,0,0);
+photos.push(canvas.toDataURL("image/jpeg",0.6));
 
 });
 
 finish.addEventListener("click",async function(){
 
-if(photos.length===0) return;
+if(photos.length===0){return;}
 
 loading.style.display="flex";
 
-try{
 await fetch(WEBAPP_URL,{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+mode:"no-cors",
 body:JSON.stringify({photos:photos})
 });
-}catch(e){}
 
 loading.style.display="none";
 alert("DONE");
+
 });
 
 });
