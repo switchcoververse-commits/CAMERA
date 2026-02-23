@@ -7,88 +7,31 @@
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-        
         .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; background: rgba(0,0,0,0.5); }
         .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
         .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
-        
-        #thumbnail-bar { 
-            background: rgba(40, 40, 40, 0.8); 
-            margin: 5px 20px; 
-            border-radius: 8px; 
-            height: 80px; 
-            display: flex; 
-            align-items: center; 
-            padding: 5px 10px; 
-            overflow-x: auto; 
-            gap: 10px;
-            z-index: 5;
-        }
+        #thumbnail-bar { background: rgba(40, 40, 40, 0.8); margin: 5px 20px; border-radius: 8px; height: 80px; display: flex; align-items: center; padding: 5px 10px; overflow-x: auto; gap: 10px; z-index: 5; }
         .thumb-container { position: relative; min-width: 60px; height: 60px; }
         .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
-        .remove-thumb { 
-            position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; 
-            border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold;
-        }
-
-        #viewport { 
-            position: relative; 
-            flex-grow: 1; 
-            margin: 10px 20px; 
-            overflow: hidden; 
-            border-radius: 12px;
-            border: 8px solid #ff0000;
-            transition: border-color 0.1s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        #viewport { position: relative; flex-grow: 1; margin: 10px 20px; overflow: hidden; border-radius: 12px; border: 8px solid #ff0000; transition: border-color 0.1s ease; display: flex; justify-content: center; align-items: center; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
-        
-        #crosshair {
-            position: relative;
-            width: 50px;
-            height: 50px;
-            z-index: 10;
-            pointer-events: none;
-        }
-        .cross-line {
-            position: absolute;
-            background: #ff0000;
-            transition: background 0.1s ease;
-        }
+        #crosshair { position: relative; width: 50px; height: 50px; z-index: 10; pointer-events: none; }
+        .cross-line { position: absolute; background: #ff0000; transition: background 0.1s ease; }
         .v-line { left: 24px; top: 0; width: 3px; height: 100%; }
         .h-line { top: 24px; left: 0; width: 100%; height: 3px; }
-
         .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; z-index: 10; }
-        #shutter { 
-            width: 70px; 
-            height: 70px; 
-            background: #fff; 
-            border: 5px solid rgba(255,255,255,0.3); 
-            border-radius: 50%; 
-            cursor: pointer; 
-        }
-        #finish-btn { 
-            background: #00ff00; color: #000; border: none; padding: 12px 40px; 
-            border-radius: 25px; font-weight: bold; cursor: pointer; display: none;
-            text-transform: uppercase;
-        }
-
-        /* Botón de activación de sensores */
-        #sensor-auth {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; text-align: center;
-        }
+        #shutter { width: 70px; height: 70px; background: #fff; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; cursor: pointer; }
+        #finish-btn { background: #00ff00; color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; display: none; text-transform: uppercase; }
+        #sensor-auth { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #auth-btn { background: #fff; color: #000; padding: 15px 30px; border-radius: 30px; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="sensor-auth">
-    <p>Se requiere acceso a sensores para nivelación técnica.</p>
-    <button id="auth-btn">ACTIVAR CÁMARA Y NIVEL</button>
+    <p>Calibración de perspectiva absoluta.</p>
+    <button id="auth-btn">ACTIVAR SENSORES TÉCNICOS</button>
 </div>
 
 <div id="camera-container">
@@ -96,9 +39,7 @@
         <a href="https://tu-tienda-etsy.com" class="back-btn">&lt;</a>
         <span class="back-text">Back to online store</span>
     </div>
-
     <div id="thumbnail-bar"></div>
-
     <div id="viewport">
         <video id="video" autoplay playsinline></video>
         <div id="crosshair">
@@ -107,7 +48,6 @@
         </div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
-
     <div class="footer">
         <button id="finish-btn">FINALIZAR ORDEN</button>
         <div id="shutter"></div>
@@ -130,8 +70,9 @@
     const authBtn = document.getElementById('auth-btn');
     
     let capturedPhotos = [];
-    let isLocked = false;
-    let lockTimeout = null;
+    let isLeveled = false;
+    let perfectFrame = null;
+    let lockTimer = null;
 
     async function initCamera() {
         try {
@@ -140,54 +81,71 @@
             });
             video.srcObject = stream;
             authScreen.style.display = 'none';
-        } catch (err) {
-            alert("Error: Se requiere permiso de cámara y sensores.");
-        }
+            startBufferProcessing();
+        } catch (err) { alert("Error de cámara."); }
     }
 
-    function setLevelColor(color) {
+    function startBufferProcessing() {
+        const ctx = canvas.getContext('2d');
+        const process = () => {
+            if (isLeveled) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+                perfectFrame = canvas.toDataURL('image/jpeg', 0.95);
+            }
+            requestAnimationFrame(process);
+        };
+        requestAnimationFrame(process);
+    }
+
+    function updateUI(color) {
         viewport.style.borderColor = color;
         vLine.style.background = color;
         hLine.style.background = color;
     }
 
     function handleOrientation(event) {
-        if (isLocked) return;
-
-        const b = event.beta;  
-        const g = event.gamma; 
+        const x = event.beta;  // Front-back
+        const y = event.gamma; // Left-right
         
-        // PARED (Vertical): Beta ~90, Gamma ~0
-        const isWall = (Math.abs(g) < 4 && Math.abs(b - 90) < 4);
-        // SUELO/TECHO (Plano): Beta ~0, Gamma ~0
-        const isFloor = (Math.abs(g) < 4 && Math.abs(b) < 4);
+        // PARED: Paralelismo absoluto (Beta 90 +/- 2, Gamma 0 +/- 2)
+        const checkWall = (Math.abs(x - 90) < 2 && Math.abs(y) < 2);
+        // SUELO: Paralelismo absoluto (Beta 0 +/- 2, Gamma 0 +/- 2)
+        const checkFloor = (Math.abs(x) < 2 && Math.abs(y) < 2);
 
-        if (isWall || isFloor) {
-            isLocked = true;
-            setLevelColor("#00ff00");
-
-            if (lockTimeout) clearTimeout(lockTimeout);
-            lockTimeout = setTimeout(() => {
-                isLocked = false;
-            }, 3000);
+        if (checkWall || checkFloor) {
+            if (!isLeveled) {
+                isLeveled = true;
+                updateUI("#00ff00");
+                // Bloqueo de 3 segundos para asegurar la captura
+                if (lockTimer) clearTimeout(lockTimer);
+                lockTimer = setTimeout(() => {
+                    // Mantiene el estado verde, pero permite re-evaluar si se sale del rango tras 3s
+                    if (!( (Math.abs(event.beta - 90) < 2 && Math.abs(event.gamma) < 2) || (Math.abs(event.beta) < 2 && Math.abs(event.gamma) < 2) )) {
+                        isLeveled = false;
+                        updateUI("#ff0000");
+                    }
+                }, 3000);
+            }
         } else {
-            setLevelColor("#ff0000");
+            // Solo vuelve a rojo si NO estamos en el periodo de gracia de 3s
+            if (!lockTimer || (lockTimer && !isLeveled)) {
+                isLeveled = false;
+                updateUI("#ff0000");
+            }
         }
     }
 
     authBtn.addEventListener('click', () => {
-        // Solicitar permisos en iOS 13+
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                        initCamera();
-                    }
-                })
-                .catch(console.error);
+            DeviceOrientationEvent.requestPermission().then(state => {
+                if (state === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation, true);
+                    initCamera();
+                }
+            });
         } else {
-            // Android y navegadores antiguos
             window.addEventListener('deviceorientation', handleOrientation, true);
             initCamera();
         }
@@ -195,11 +153,9 @@
 
     shutter.addEventListener('click', () => {
         shutterSound.play();
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const imageData = canvas.toDataURL('image/jpeg', 0.9);
-        capturedPhotos.push({ id: Date.now(), data: imageData });
+        // Si hay un frame perfecto guardado por telemetría, usamos ese. Si no, captura actual.
+        const finalImage = isLeveled && perfectFrame ? perfectFrame : canvas.toDataURL('image/jpeg', 0.9);
+        capturedPhotos.push({ id: Date.now(), data: finalImage });
         renderThumbnails();
     });
 
@@ -220,9 +176,7 @@
         renderThumbnails();
     };
 
-    finishBtn.addEventListener('click', () => {
-        alert("Transferencia iniciada.");
-    });
+    initCamera();
 </script>
 </body>
 </html>
