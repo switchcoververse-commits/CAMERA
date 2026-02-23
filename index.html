@@ -1,162 +1,219 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Pro V9.0 - Hilo de Ariadna</title>
-<style>
-body { margin:0; font-family:-apple-system, sans-serif; background:#000; color:#fff; overflow:hidden; }
+<title>Scanner Stable V1</title>
 
-#start-overlay {
-    position: fixed;
-    top:0; left:0;
-    width:100%; height:100%;
-    z-index:9999;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    background: rgba(0,0,0,0.85);
+<style>
+html,body{
+margin:0;
+padding:0;
+background:#000;
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+overflow:hidden;
 }
 
-#start-overlay h2 { color:#00d4ff; margin-bottom:20px; }
-#start-overlay button { background:#00d4ff; color:#000; padding:20px 50px; border:none; border-radius:60px; font-weight:900; font-size:22px; cursor:pointer; }
+#overlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#000;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
 
-.viewport { position:relative; width:100vw; height:70vh; display:flex; justify-content:center; align-items:center; }
-video { width:90%; height:auto; border-radius:15px; object-fit:cover; }
+#overlay button{
+padding:20px 50px;
+font-size:22px;
+font-weight:900;
+border-radius:50px;
+border:none;
+background:#00d4ff;
+color:#000;
+}
 
-.scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:75%; height:55%; border:4px solid rgba(255,0,0,0.6); border-radius:25px; pointer-events:none; transition: all 0.5s ease; }
+#video{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+display:none;
+}
 
-#flash { position:absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; z-index:50; pointer-events:none; }
+#frame{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:80%;
+height:60%;
+border:5px solid red;
+border-radius:25px;
+pointer-events:none;
+display:none;
+transition:0.3s;
+}
 
-.controls { width:100%; display:flex; justify-content:center; gap:20px; padding:10px 0; position:relative; z-index:50; }
-.shutter-btn { width:80px; height:80px; background:white; border-radius:50%; border:6px solid #333; cursor:pointer; display:none; }
-.btn-finish { display:none; padding:12px 30px; background:#00ff00; color:#000; border:none; font-weight:900; border-radius:50px; font-size:16px; cursor:pointer; animation:pulse 2s infinite; }
+#controls{
+position:fixed;
+bottom:30px;
+width:100%;
+display:flex;
+justify-content:center;
+gap:20px;
+display:none;
+}
 
-@keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.05);}100%{transform:scale(1);} }
+#capture{
+width:80px;
+height:80px;
+border-radius:50%;
+background:white;
+border:6px solid #333;
+}
 
-#loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; flex-direction:column; align-items:center; justify-content:center; }
-.spinner { width:50px; height:50px; border:6px solid #222; border-top:6px solid #00ff00; border-radius:50%; animation:spin 1s linear infinite; }
-@keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+#finish{
+padding:12px 30px;
+background:#00ff00;
+border:none;
+border-radius:40px;
+font-weight:900;
+}
 
-.status-text, .invalid-text { position:absolute; top:10%; left:50%; transform:translateX(-50%); font-weight:900; font-size:24px; opacity:0; text-align:center; transition:opacity 0.8s ease; z-index:60; }
-.status-text { color:#00ff00; text-shadow:0 0 15px rgba(0,0,0,1);}
-.invalid-text { color:#ff3333; text-shadow:0 0 15px rgba(0,0,0,1);}
+#loading{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:black;
+display:none;
+justify-content:center;
+align-items:center;
+z-index:10000;
+color:#00ff00;
+font-weight:900;
+font-size:20px;
+}
 </style>
 </head>
+
 <body>
 
-<div id="start-overlay">
-    <h2>Align your device inside the frame and press Start Scanner</h2>
-    <button id="init-btn">START SCANNER</button>
+<div id="overlay">
+<h2 style="color:#00d4ff;">Align device and press Start</h2>
+<button id="startBtn">START SCANNER</button>
 </div>
 
-<div class="viewport">
-    <video id="video" autoplay playsinline muted></video>
-    <div class="scanner-frame" id="frame"></div>
-    <div id="flash"></div>
-    <div class="status-text" id="status-text">DEVICE SAVED.<br>NEXT ONE!</div>
-    <div class="invalid-text" id="invalid-text">INVALID PHOTO<br>PLEASE ALIGN DEVICE</div>
+<video id="video" playsinline autoplay muted></video>
+<div id="frame"></div>
+
+<div id="controls">
+<div id="capture"></div>
+<button id="finish">FINISH</button>
 </div>
 
-<div class="controls">
-    <div class="shutter-btn" id="capture"></div>
-    <button id="finish" class="btn-finish">DONE: FINISH ORDER</button>
-</div>
-
-<div id="loading">
-    <div class="spinner"></div>
-    <p style="margin-top:20px; font-weight:900; color:#00ff00; font-size:18px;">SENDING TO DRIVE...</p>
-</div>
+<div id="loading">SENDING TO DRIVE...</div>
 
 <script>
-window.addEventListener('load', function() {
-    const WEBAPP_URL = "https://script.google.com/macros/s/YOUR_WEBAPP_ID/exec";
-    const GOOGLE_FORM = "https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform";
-    const MAX_PHOTOS = 30;
-    let photos = [], isLevelValid=false, orientationActive=false;
+window.addEventListener("load",function(){
 
-    const video = document.getElementById('video');
-    const frame = document.getElementById('frame');
-    const startOverlayBtn = document.getElementById('init-btn');
-    const captureBtn = document.getElementById('capture');
-    const finishBtn = document.getElementById('finish');
-    const canvas = document.createElement('canvas');
-    const flash = document.getElementById('flash');
-    const statusText = document.getElementById('status-text');
-    const invalidText = document.getElementById('invalid-text');
+const video=document.getElementById("video");
+const frame=document.getElementById("frame");
+const startBtn=document.getElementById("startBtn");
+const overlay=document.getElementById("overlay");
+const controls=document.getElementById("controls");
+const capture=document.getElementById("capture");
+const finish=document.getElementById("finish");
+const loading=document.getElementById("loading");
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const etyOrderID = urlParams.get('order') || "MANUAL_" + Math.random().toString(36).substring(2,6).toUpperCase();
+let stream=null;
+let photos=[];
+let levelOK=false;
+const MAX_PHOTOS=30;
+const WEBAPP_URL="YOUR_WEBAPP_URL_HERE";
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function initOrientation(){
+if(window.DeviceOrientationEvent){
+window.addEventListener("deviceorientation",function(e){
 
-    function playCameraSound(){
-        if(audioCtx.state==='suspended') audioCtx.resume();
-        const osc=audioCtx.createOscillator();
-        const gain=audioCtx.createGain();
-        osc.frequency.setValueAtTime(600,audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.1);
-        gain.gain.setValueAtTime(0.4,audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.1);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime+0.1);
-    }
+if(e.beta===null || e.gamma===null){return;}
 
-    function handleLevel(e){
-        const tilt=Math.abs(e.beta), side=Math.abs(e.gamma);
-        const isWall=(tilt>75 && tilt<105 && side<8);
-        const isFlat=(tilt<10||tilt>170)&&(side<10);
-        isLevelValid = (isWall||isFlat);
-        frame.style.borderColor = isLevelValid ? "#00ff00" : "rgba(255,0,0,0.6)";
-        frame.style.borderWidth = isLevelValid ? "6px" : "4px";
-        frame.style.boxShadow = isLevelValid ? "0 0 25px #00ff00" : "none";
-    }
+let beta=Math.abs(e.beta);
+let gamma=Math.abs(e.gamma);
 
-    startOverlayBtn.onclick = async () => {
-        audioCtx.resume();
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-            video.srcObject = stream;
-        } catch(err){ alert("Camera access required."); }
-        startOverlayBtn.parentElement.style.display='none';
-        captureBtn.style.display='block';
-        if(!orientationActive){
-            if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
-                try {
-                    const res = await DeviceOrientationEvent.requestPermission();
-                    if(res==='granted') window.addEventListener('deviceorientation', handleLevel);
-                } catch(e){}
-            } else { window.addEventListener('deviceorientation', handleLevel); }
-            orientationActive=true;
-        }
-    };
+let wall=(beta>80 && beta<100 && gamma<10);
+let flat=(beta<10 && gamma<10);
 
-    captureBtn.onclick = () => {
-        if(!video.videoWidth) return;
-        if(!isLevelValid){ invalidText.style.opacity='1'; setTimeout(()=>{ invalidText.style.opacity='0'; },2000); return; }
-        if(photos.length>=MAX_PHOTOS){ alert("Maximum " + MAX_PHOTOS + " photos per order."); return; }
-        playCameraSound();
-        flash.style.opacity='1'; setTimeout(()=>{ flash.style.opacity='0'; },80);
-        canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-        canvas.getContext('2d').drawImage(video,0,0);
-        photos.push(canvas.toDataURL('image/jpeg',0.45));
-        statusText.style.opacity='1'; setTimeout(()=>{ statusText.style.opacity='0'; },2000);
-        finishBtn.style.display='inline-block';
-    };
+if(wall || flat){
+frame.style.borderColor="#00ff00";
+levelOK=true;
+}else{
+frame.style.borderColor="red";
+levelOK=false;
+}
 
-    finishBtn.onclick = async () => {
-        if(!navigator.onLine){ alert("No internet connection"); return; }
-        if(photos.length===0){ alert("Capture at least one photo"); return; }
-        finishBtn.disabled=true;
-        document.getElementById('loading').style.display='flex';
-        try {
-            await fetch(WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify({ userName: etyOrderID, photos:photos }) });
-            setTimeout(()=>{ window.location.href=GOOGLE_FORM+"?usp=pp_url&entry.ID_AQUI="+etyOrderID; },1500);
-        } catch(err){ alert("Network error"); document.getElementById('loading').style.display='none'; finishBtn.disabled=false; }
-    };
+});
+}
+}
+
+async function startCamera(){
+stream=await navigator.mediaDevices.getUserMedia({
+video:{facingMode:"environment"},
+audio:false
+});
+video.srcObject=stream;
+video.style.display="block";
+frame.style.display="block";
+controls.style.display="flex";
+overlay.style.display="none";
+initOrientation();
+}
+
+startBtn.addEventListener("click",function(){
+startCamera();
+});
+
+capture.addEventListener("click",function(){
+
+if(!levelOK){return;}
+if(photos.length>=MAX_PHOTOS){return;}
+
+let canvas=document.createElement("canvas");
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+canvas.getContext("2d").drawImage(video,0,0);
+photos.push(canvas.toDataURL("image/jpeg",0.6));
+
+});
+
+finish.addEventListener("click",async function(){
+
+if(photos.length===0){return;}
+
+loading.style.display="flex";
+
+await fetch(WEBAPP_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify({photos:photos})
+});
+
+loading.style.display="none";
+alert("DONE");
+
+});
 
 });
 </script>
+
 </body>
 </html>
