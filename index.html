@@ -9,10 +9,11 @@
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
         
         /* Header */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; z-index: 10; }
-        .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; }
+        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; }
+        .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
+        .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Galería de miniaturas (Zona Cargando cámara) */
+        /* Galería de miniaturas */
         #thumbnail-bar { 
             background: rgba(40, 40, 40, 0.8); 
             margin: 0 20px; 
@@ -23,32 +24,60 @@
             padding: 5px 10px; 
             overflow-x: auto; 
             gap: 10px;
+            z-index: 5;
         }
         .thumb-container { position: relative; min-width: 60px; height: 60px; }
         .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
         .remove-thumb { 
-            position: absolute; top: -5px; right: -5px; background: red; color: white; 
-            border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; 
+            position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; 
+            border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold;
         }
 
-        /* Video y Nivel */
-        #viewport { position: relative; flex-grow: 1; display: flex; justify-content: center; align-items: center; margin: 20px; overflow: hidden; border-radius: 12px; }
+        /* Viewport y Marco de Nivelación */
+        #viewport { 
+            position: relative; 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin: 10px 20px; 
+            overflow: hidden; 
+            border-radius: 12px;
+            border: 8px solid #ff0000; /* Marco inicial Rojo */
+            transition: border-color 0.2s ease;
+        }
         video { width: 100%; height: 100%; object-fit: cover; }
-        #level-indicator { 
-            position: absolute; width: 40px; height: 40px; border: 2px solid #fff; border-radius: 50%; 
-            display: flex; justify-content: center; align-items: center; pointer-events: none;
+        
+        /* Cruz Central */
+        #crosshair {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            pointer-events: none;
         }
-        #level-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; transition: all 0.1s ease; }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff0000; /* Cruz inicial Roja */
+            transition: background 0.2s ease;
+        }
+        #crosshair::before { top: 24px; left: 0; width: 100%; height: 3px; }
+        #crosshair::after { left: 24px; top: 0; width: 3px; height: 100%; }
 
-        /* Footer y Controles */
-        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; gap: 20px; }
-        .controls { display: flex; align-items: center; gap: 40px; }
-        #shutter { width: 80px; height: 80px; background: #555; border: 5px solid #fff; border-radius: 50%; cursor: pointer; }
-        #shutter:active { transform: scale(0.9); }
-        .flash-btn { font-size: 24px; background: none; border: none; color: #fff; }
+        /* Footer */
+        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; }
+        #shutter { 
+            width: 70px; 
+            height: 70px; 
+            background: #fff; 
+            border: 5px solid rgba(255,255,255,0.3); 
+            border-radius: 50%; 
+            cursor: pointer; 
+        }
         #finish-btn { 
-            background: #fff; color: #000; border: none; padding: 12px 30px; 
+            background: #00ff00; color: #000; border: none; padding: 12px 40px; 
             border-radius: 25px; font-weight: bold; cursor: pointer; display: none;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -57,27 +86,20 @@
 <div id="camera-container">
     <div class="header">
         <a href="https://tu-tienda-etsy.com" class="back-btn">&lt;</a>
-        <div style="width: 24px;"></div>
+        <span class="back-text">Back to online store</span>
     </div>
 
-    <div id="thumbnail-bar">
-        </div>
+    <div id="thumbnail-bar"></div>
 
     <div id="viewport">
         <video id="video" autoplay playsinline></video>
-        <div id="level-indicator">
-            <div id="level-dot"></div>
-        </div>
+        <div id="crosshair"></div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <div class="footer">
         <button id="finish-btn">FINALIZAR ORDEN</button>
-        <div class="controls">
-            <div style="width: 24px;"></div>
-            <div id="shutter"></div>
-            <button class="flash-btn">⚡</button>
-        </div>
+        <div id="shutter"></div>
     </div>
 </div>
 
@@ -90,10 +112,10 @@
     const shutterSound = document.getElementById('shutter-sound');
     const thumbBar = document.getElementById('thumbnail-bar');
     const finishBtn = document.getElementById('finish-btn');
-    const levelDot = document.getElementById('level-dot');
+    const viewport = document.getElementById('viewport');
+    const crosshair = document.getElementById('crosshair');
     let capturedPhotos = [];
 
-    // Iniciar Cámara
     async function initCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -101,79 +123,65 @@
             });
             video.srcObject = stream;
         } catch (err) {
-            console.error("Error acceso cámara: ", err);
+            console.error("Acceso denegado:", err);
         }
     }
 
-    // Lógica de Nivelación (Acelerómetro)
+    // Lógica de nivelación Marco y Cruz
     window.addEventListener('deviceorientation', (event) => {
-        const beta = event.beta;  // Inclinación adelante/atrás (-180 a 180)
-        const gamma = event.gamma; // Inclinación izquierda/derecha (-90 a 90)
+        const beta = event.beta;  // Inclinación X
+        const gamma = event.gamma; // Inclinación Y
         
-        // Mapeo de movimiento del punto verde
-        let x = Math.min(Math.max(gamma, -20), 20) * 1;
-        let y = Math.min(Math.max(beta - 90, -20), 20) * 1; 
-        
-        levelDot.style.transform = `translate(${x}px, ${y}px)`;
-        
-        // Indicador visual de nivel perfecto
-        if (Math.abs(gamma) < 2 && Math.abs(beta - 90) < 2) {
-            levelDot.style.background = "#0f0";
-            levelDot.style.boxShadow = "0 0 10px #0f0";
+        // Umbral de precisión: +/- 3 grados para posición "Nivelada"
+        const isLeveled = (Math.abs(gamma) < 3 && Math.abs(beta - 90) < 3);
+
+        if (isLeveled) {
+            viewport.style.borderColor = "#00ff00"; // Verde
+            document.styleSheets[0].addRule('#crosshair::before', 'background: #00ff00 !important');
+            document.styleSheets[0].addRule('#crosshair::after', 'background: #00ff00 !important');
         } else {
-            levelDot.style.background = "red";
-            levelDot.style.boxShadow = "none";
+            viewport.style.borderColor = "#ff0000"; // Rojo
+            document.styleSheets[0].addRule('#crosshair::before', 'background: #ff0000 !important');
+            document.styleSheets[0].addRule('#crosshair::after', 'background: #ff0000 !important');
         }
     });
 
-    // Captura de Foto
     shutter.addEventListener('click', () => {
         shutterSound.play();
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         
-        const imageData = canvas.toDataURL('image/jpeg', 1.0);
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
         const photoId = Date.now();
         capturedPhotos.push({ id: photoId, data: imageData });
         
         renderThumbnails();
     });
 
-    // Renderizar Miniaturas
     function renderThumbnails() {
         thumbBar.innerHTML = '';
-        capturedPhotos.forEach((photo, index) => {
+        capturedPhotos.forEach((photo) => {
             const container = document.createElement('div');
             container.className = 'thumb-container';
-            
             container.innerHTML = `
                 <img src="${photo.data}" class="thumb-img">
                 <button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>
             `;
             thumbBar.appendChild(container);
         });
-        
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
         thumbBar.scrollLeft = thumbBar.scrollWidth;
     }
 
-    // Eliminar Foto
     window.removePhoto = function(id) {
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
         renderThumbnails();
     };
 
-    // Finalizar Orden
     finishBtn.addEventListener('click', () => {
-        // Estructura lista para envío HTTP a Make/Apps Script
-        const orderData = {
-            order_id: "ETSY_" + Date.now(),
-            photos: capturedPhotos,
-            timestamp: new Date().toISOString()
-        };
-        console.log("Orden lista para enviar:", orderData);
-        alert("Orden finalizada. Iniciando carga de " + capturedPhotos.length + " imágenes.");
+        alert("Enviando " + capturedPhotos.length + " imágenes a producción.");
+        // Integración con Web App pendiente de URL
     });
 
     initCamera();
