@@ -74,9 +74,22 @@
             border-radius: 25px; font-weight: bold; cursor: pointer; display: none;
             text-transform: uppercase;
         }
+
+        /* Botón de activación de sensores */
+        #sensor-auth {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+        }
+        #auth-btn { background: #fff; color: #000; padding: 15px 30px; border-radius: 30px; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
+
+<div id="sensor-auth">
+    <p>Se requiere acceso a sensores para nivelación técnica.</p>
+    <button id="auth-btn">ACTIVAR CÁMARA Y NIVEL</button>
+</div>
 
 <div id="camera-container">
     <div class="header">
@@ -113,6 +126,8 @@
     const viewport = document.getElementById('viewport');
     const vLine = document.getElementById('v-line');
     const hLine = document.getElementById('h-line');
+    const authScreen = document.getElementById('sensor-auth');
+    const authBtn = document.getElementById('auth-btn');
     
     let capturedPhotos = [];
     let isLocked = false;
@@ -120,14 +135,13 @@
 
     async function initCamera() {
         try {
-            const constraints = {
+            const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-            };
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            });
             video.srcObject = stream;
-            video.onloadedmetadata = () => video.play();
+            authScreen.style.display = 'none';
         } catch (err) {
-            console.error("Error acceso cámara:", err);
+            alert("Error: Se requiere permiso de cámara y sensores.");
         }
     }
 
@@ -137,18 +151,18 @@
         hLine.style.background = color;
     }
 
-    window.addEventListener('deviceorientation', (event) => {
+    function handleOrientation(event) {
         if (isLocked) return;
 
-        // Beta: inclinación adelante/atrás. Gamma: inclinación izquierda/derecha.
-        const b = event.beta; 
+        const b = event.beta;  
         const g = event.gamma; 
         
-        // Pared Vertical (Beta cerca de 90), Suelo/Techo (Beta cerca de 0)
-        const isVertical = (Math.abs(g) < 4 && Math.abs(b - 90) < 4);
-        const isHorizontal = (Math.abs(g) < 4 && Math.abs(b) < 4);
+        // PARED (Vertical): Beta ~90, Gamma ~0
+        const isWall = (Math.abs(g) < 4 && Math.abs(b - 90) < 4);
+        // SUELO/TECHO (Plano): Beta ~0, Gamma ~0
+        const isFloor = (Math.abs(g) < 4 && Math.abs(b) < 4);
 
-        if (isVertical || isHorizontal) {
+        if (isWall || isFloor) {
             isLocked = true;
             setLevelColor("#00ff00");
 
@@ -159,18 +173,33 @@
         } else {
             setLevelColor("#ff0000");
         }
-    }, true);
+    }
+
+    authBtn.addEventListener('click', () => {
+        // Solicitar permisos en iOS 13+
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                        initCamera();
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Android y navegadores antiguos
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            initCamera();
+        }
+    });
 
     shutter.addEventListener('click', () => {
         shutterSound.play();
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-        
+        canvas.getContext('2d').drawImage(video, 0, 0);
         const imageData = canvas.toDataURL('image/jpeg', 0.9);
         capturedPhotos.push({ id: Date.now(), data: imageData });
-        
         renderThumbnails();
     });
 
@@ -192,10 +221,8 @@
     };
 
     finishBtn.addEventListener('click', () => {
-        alert("Iniciando transferencia de " + capturedPhotos.length + " imágenes.");
+        alert("Transferencia iniciada.");
     });
-
-    initCamera();
 </script>
 </body>
 </html>
