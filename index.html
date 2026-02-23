@@ -6,7 +6,7 @@
     <title>Cámara Camuflaje Pro</title>
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
-        #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
         .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; background: rgba(0,0,0,0.5); }
         .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
         .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
@@ -23,15 +23,16 @@
         .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; z-index: 10; }
         #shutter { width: 70px; height: 70px; background: #fff; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; cursor: pointer; }
         #finish-btn { background: #00ff00; color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; display: none; text-transform: uppercase; }
-        #sensor-auth { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        #auth-btn { background: #fff; color: #000; padding: 15px 30px; border-radius: 30px; border: none; font-weight: bold; }
+        #sensor-auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
+        #auth-btn { background: #fff; color: #000; padding: 20px 40px; border-radius: 40px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div id="sensor-auth">
-    <p>Calibración de perspectiva absoluta.</p>
-    <button id="auth-btn">ACTIVAR SENSORES TÉCNICOS</button>
+    <h2 style="margin-bottom: 10px;">Calibración de Perspectiva</h2>
+    <p>Para asegurar el clonado de textura exacto, se requiere acceso a los sensores de inclinación.</p>
+    <button id="auth-btn">PERMITIR Y COMENZAR</button>
 </div>
 
 <div id="camera-container">
@@ -68,11 +69,13 @@
     const hLine = document.getElementById('h-line');
     const authScreen = document.getElementById('sensor-auth');
     const authBtn = document.getElementById('auth-btn');
+    const camContainer = document.getElementById('camera-container');
     
     let capturedPhotos = [];
     let isLeveled = false;
     let perfectFrame = null;
     let lockTimer = null;
+    let isLockActive = false;
 
     async function initCamera() {
         try {
@@ -80,9 +83,15 @@
                 video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
             });
             video.srcObject = stream;
-            authScreen.style.display = 'none';
-            startBufferProcessing();
-        } catch (err) { alert("Error de cámara."); }
+            video.onloadedmetadata = () => {
+                video.play();
+                authScreen.style.display = 'none';
+                camContainer.style.visibility = 'visible';
+                startBufferProcessing();
+            };
+        } catch (err) {
+            alert("Error: Se requiere permiso de cámara.");
+        }
     }
 
     function startBufferProcessing() {
@@ -106,45 +115,46 @@
     }
 
     function handleOrientation(event) {
-        const x = event.beta;  // Front-back
-        const y = event.gamma; // Left-right
+        if (isLockActive) return;
+
+        const x = event.beta;  
+        const y = event.gamma; 
         
-        // PARED: Paralelismo absoluto (Beta 90 +/- 2, Gamma 0 +/- 2)
-        const checkWall = (Math.abs(x - 90) < 2 && Math.abs(y) < 2);
-        // SUELO: Paralelismo absoluto (Beta 0 +/- 2, Gamma 0 +/- 2)
-        const checkFloor = (Math.abs(x) < 2 && Math.abs(y) < 2);
+        const checkWall = (Math.abs(x - 90) < 2.5 && Math.abs(y) < 2.5);
+        const checkFloor = (Math.abs(x) < 2.5 && Math.abs(y) < 2.5);
 
         if (checkWall || checkFloor) {
-            if (!isLeveled) {
-                isLeveled = true;
-                updateUI("#00ff00");
-                // Bloqueo de 3 segundos para asegurar la captura
-                if (lockTimer) clearTimeout(lockTimer);
-                lockTimer = setTimeout(() => {
-                    // Mantiene el estado verde, pero permite re-evaluar si se sale del rango tras 3s
-                    if (!( (Math.abs(event.beta - 90) < 2 && Math.abs(event.gamma) < 2) || (Math.abs(event.beta) < 2 && Math.abs(event.gamma) < 2) )) {
-                        isLeveled = false;
-                        updateUI("#ff0000");
-                    }
-                }, 3000);
-            }
+            isLeveled = true;
+            isLockActive = true;
+            updateUI("#00ff00");
+
+            if (lockTimer) clearTimeout(lockTimer);
+            lockTimer = setTimeout(() => {
+                isLockActive = false;
+                // Forzar re-evaluación inmediata al terminar el bloqueo
+                isLeveled = false; 
+            }, 3000);
         } else {
-            // Solo vuelve a rojo si NO estamos en el periodo de gracia de 3s
-            if (!lockTimer || (lockTimer && !isLeveled)) {
-                isLeveled = false;
-                updateUI("#ff0000");
-            }
+            isLeveled = false;
+            updateUI("#ff0000");
         }
     }
 
     authBtn.addEventListener('click', () => {
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(state => {
-                if (state === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation, true);
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                        initCamera();
+                    } else {
+                        alert("Permiso de sensores denegado.");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
                     initCamera();
-                }
-            });
+                });
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
             initCamera();
@@ -153,11 +163,17 @@
 
     shutter.addEventListener('click', () => {
         shutterSound.play();
-        // Si hay un frame perfecto guardado por telemetría, usamos ese. Si no, captura actual.
-        const finalImage = isLeveled && perfectFrame ? perfectFrame : canvas.toDataURL('image/jpeg', 0.9);
+        const finalImage = (isLeveled || isLockActive) && perfectFrame ? perfectFrame : captureCurrentFrame();
         capturedPhotos.push({ id: Date.now(), data: finalImage });
         renderThumbnails();
     });
+
+    function captureCurrentFrame() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        return canvas.toDataURL('image/jpeg', 0.9);
+    }
 
     function renderThumbnails() {
         thumbBar.innerHTML = '';
@@ -176,7 +192,6 @@
         renderThumbnails();
     };
 
-    initCamera();
 </script>
 </body>
 </html>
