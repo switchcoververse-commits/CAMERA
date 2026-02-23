@@ -8,13 +8,13 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
         
-        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; }
+        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; background: rgba(0,0,0,0.5); }
         .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
         .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
         
         #thumbnail-bar { 
             background: rgba(40, 40, 40, 0.8); 
-            margin: 0 20px; 
+            margin: 5px 20px; 
             border-radius: 8px; 
             height: 80px; 
             display: flex; 
@@ -34,21 +34,22 @@
         #viewport { 
             position: relative; 
             flex-grow: 1; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
             margin: 10px 20px; 
             overflow: hidden; 
             border-radius: 12px;
             border: 8px solid #ff0000;
             transition: border-color 0.1s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
         
         #crosshair {
-            position: absolute;
+            position: relative;
             width: 50px;
             height: 50px;
+            z-index: 10;
             pointer-events: none;
         }
         .cross-line {
@@ -59,7 +60,7 @@
         .v-line { left: 24px; top: 0; width: 3px; height: 100%; }
         .h-line { top: 24px; left: 0; width: 100%; height: 3px; }
 
-        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; }
+        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; z-index: 10; }
         #shutter { 
             width: 70px; 
             height: 70px; 
@@ -119,12 +120,14 @@
 
     async function initCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
-            });
+            const constraints = {
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
+            video.onloadedmetadata = () => video.play();
         } catch (err) {
-            console.error("Acceso denegado:", err);
+            console.error("Error acceso cámara:", err);
         }
     }
 
@@ -135,34 +138,35 @@
     }
 
     window.addEventListener('deviceorientation', (event) => {
-        if (isLocked) return; // Bloqueo de micromovimientos activado
+        if (isLocked) return;
 
-        const beta = event.beta; 
-        const gamma = event.gamma; 
+        // Beta: inclinación adelante/atrás. Gamma: inclinación izquierda/derecha.
+        const b = event.beta; 
+        const g = event.gamma; 
         
-        // Detección de posición nivelada (umbral de 3 grados)
-        const isLeveled = (Math.abs(gamma) < 3 && Math.abs(beta - 90) < 3);
+        // Pared Vertical (Beta cerca de 90), Suelo/Techo (Beta cerca de 0)
+        const isVertical = (Math.abs(g) < 4 && Math.abs(b - 90) < 4);
+        const isHorizontal = (Math.abs(g) < 4 && Math.abs(b) < 4);
 
-        if (isLeveled) {
+        if (isVertical || isHorizontal) {
             isLocked = true;
-            setLevelColor("#00ff00"); // Verde
+            setLevelColor("#00ff00");
 
-            // Mantener estado verde durante 3 segundos
             if (lockTimeout) clearTimeout(lockTimeout);
             lockTimeout = setTimeout(() => {
                 isLocked = false;
-                // Al terminar los 3s, se reevalúa la posición en el siguiente evento
             }, 3000);
         } else {
-            setLevelColor("#ff0000"); // Rojo
+            setLevelColor("#ff0000");
         }
-    });
+    }, true);
 
     shutter.addEventListener('click', () => {
         shutterSound.play();
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
         
         const imageData = canvas.toDataURL('image/jpeg', 0.9);
         capturedPhotos.push({ id: Date.now(), data: imageData });
@@ -188,7 +192,7 @@
     };
 
     finishBtn.addEventListener('click', () => {
-        alert("Enviando " + capturedPhotos.length + " imágenes.");
+        alert("Iniciando transferencia de " + capturedPhotos.length + " imágenes.");
     });
 
     initCamera();
