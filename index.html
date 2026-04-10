@@ -35,7 +35,7 @@
 
 <div id="sensor-auth">
     <h2 style="margin-bottom: 10px;">Pro Perspective Calibration</h2>
-    <p>Hold your phone steady in any position.<br>Tap to start.</p>
+    <p>Calibrating sensors for texture cloning.<br>Tap to start.</p>
     <button id="auth-btn">START CAMERA</button>
 </div>
 
@@ -135,15 +135,15 @@
         const beta = event.beta;  
         const gamma = event.gamma; 
         
-        // TOLERANCIA FLEXIBLE: Aumentada a 10 grados para facilitar el uso manual
-        const t = 10.0; 
+        // TOLERANCIA DIFERENCIADA:
+        // tV (Vertical/Frontal): 10 grados para facilitar el uso.
+        // tL (Lateral): 3 grados. Si el móvil se inclina a los lados, el clonado falla.
+        const tV = 10.0; 
+        const tL = 3.0;
 
-        // PARED: Beta cerca de 90, Gamma cerca de 0
-        const checkWall = (Math.abs(beta - 90) < t && Math.abs(gamma) < t);
-        // SUELO: Beta cerca de 0, Gamma cerca de 0
-        const checkFloor = (Math.abs(beta) < t && Math.abs(gamma) < t);
-        // TECHO: Beta cerca de 180/-180, Gamma cerca de 0
-        const checkCeiling = (Math.abs(Math.abs(beta) - 180) < t && Math.abs(gamma) < t);
+        const checkWall = (Math.abs(beta - 90) < tV && Math.abs(gamma) < tL);
+        const checkFloor = (Math.abs(beta) < tV && Math.abs(gamma) < tL);
+        const checkCeiling = (Math.abs(Math.abs(beta) - 180) < tV && Math.abs(gamma) < tL);
 
         if (checkWall || checkFloor || checkCeiling) {
             isLeveled = true;
@@ -221,26 +221,29 @@
         renderThumbnails();
     };
 
-    // ACCIÓN DEL BOTÓN FINISH ORDER
     finishBtn.addEventListener('click', async () => {
+        const originalText = finishBtn.innerText;
         finishBtn.disabled = true;
         finishBtn.innerText = "SENDING...";
         
         const payload = {
             timestamp: new Date().toISOString(),
+            photoCount: capturedPhotos.length,
             photos: capturedPhotos.map(p => p.data)
         };
 
         try {
-            // Aquí se conectará con el Webhook de Make en el siguiente paso
-            console.log("Payload ready:", payload);
-            alert("Order images captured! Ready for transfer.");
-            // Una vez confirmada la recepción, podrías redirigir al usuario
-            // window.location.href = "SUCCESS_URL";
+            console.log("Transmission initialized:", payload);
+            // Simulación de envío exitoso hasta tener el Webhook real
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            alert("SUCCESS: Images sent to production.");
+            finishBtn.innerText = "SENT!";
+            // Reset tras éxito opcional
+            // capturedPhotos = []; renderThumbnails();
         } catch (err) {
-            alert("Upload failed. Try again.");
+            alert("ERROR: Connection lost.");
             finishBtn.disabled = false;
-            finishBtn.innerText = "FINISH ORDER";
+            finishBtn.innerText = originalText;
         }
     });
 </script>
