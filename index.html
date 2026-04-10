@@ -12,8 +12,8 @@
         .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
         #thumbnail-bar { background: rgba(40, 40, 40, 0.8); margin: 5px 20px; border-radius: 8px; height: 80px; display: flex; align-items: center; padding: 5px 10px; overflow-x: auto; gap: 10px; z-index: 5; }
         .thumb-container { position: relative; min-width: 60px; height: 60px; }
-        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; cursor: pointer; }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold; z-index: 6; }
         #viewport { position: relative; flex-grow: 1; margin: 10px 20px; overflow: hidden; border-radius: 12px; border: 8px solid #ff0000; transition: border-color 0.1s ease; display: flex; justify-content: center; align-items: center; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
         #crosshair { position: relative; width: 50px; height: 50px; z-index: 10; pointer-events: none; }
@@ -26,14 +26,22 @@
         #finish-btn { background: #00ff00; color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; display: none; text-transform: uppercase; }
         #sensor-auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
         #auth-btn { background: #fff; color: #000; padding: 20px 40px; border-radius: 40px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 20px; }
+        #viewer-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; justify-content: center; align-items: center; flex-direction: column; }
+        #viewer-img { max-width: 90%; max-height: 80%; object-fit: contain; border: 2px solid #fff; }
+        #close-viewer { position: absolute; top: 30px; right: 30px; color: #fff; font-size: 40px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="sensor-auth">
     <h2 style="margin-bottom: 10px;">Pro Perspective Calibration</h2>
-    <p>Activating levelers for Walls, Floors, and Ceilings to ensure texture cloning accuracy.</p>
-    <button id="auth-btn">ENABLE CAMERA & LEVEL</button>
+    <p>Step 1: Place phone flat on a surface.<br>Step 2: Tap the button to calibrate and start.</p>
+    <button id="auth-btn">CALIBRATE & START</button>
+</div>
+
+<div id="viewer-modal">
+    <span id="close-viewer">&times;</span>
+    <img id="viewer-img" src="">
 </div>
 
 <div id="camera-container">
@@ -71,12 +79,19 @@
     const authScreen = document.getElementById('sensor-auth');
     const authBtn = document.getElementById('auth-btn');
     const camContainer = document.getElementById('camera-container');
+    const viewerModal = document.getElementById('viewer-modal');
+    const viewerImg = document.getElementById('viewer-img');
+    const closeViewer = document.getElementById('close-viewer');
     
     let capturedPhotos = [];
     let isLeveled = false;
     let perfectFrame = null;
     let lockTimer = null;
     let isLockActive = false;
+
+    // MODALIDAD CALIBRACIÓN: Almacena el error inicial del sensor
+    let offsetBeta = 0;
+    let offsetGamma = 0;
 
     async function initCamera() {
         try {
@@ -121,12 +136,16 @@
     function handleOrientation(event) {
         if (isLockActive) return;
 
-        const x = event.beta;  
-        const y = event.gamma; 
+        // Aplicación de Calibración (Offset) + Lectura actual
+        const beta = event.beta - offsetBeta;  
+        const gamma = event.gamma - offsetGamma; 
         
-        const checkWall = (Math.abs(x - 90) < 2.5 && Math.abs(y) < 2.5);
-        const checkFloor = (Math.abs(x) < 2.5 && Math.abs(y) < 2.5);
-        const checkCeiling = (Math.abs(Math.abs(x) - 180) < 2.5 && Math.abs(y) < 2.5);
+        // SUAVIZADO: Tolerancia aumentada a 5.0 grados para mayor facilidad
+        const t = 5.0; 
+
+        const checkWall = (Math.abs(beta - 90) < t && Math.abs(gamma) < t);
+        const checkFloor = (Math.abs(beta) < t && Math.abs(gamma) < t);
+        const checkCeiling = (Math.abs(Math.abs(beta) - 180) < t && Math.abs(gamma) < t);
 
         if (checkWall || checkFloor || checkCeiling) {
             isLeveled = true;
@@ -137,7 +156,6 @@
             lockTimer = setTimeout(() => {
                 isLockActive = false;
                 isLeveled = false;
-                // Immediate re-check of current position
                 updateUI("#ff0000", false);
             }, 3000);
         } else {
@@ -150,6 +168,14 @@
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission().then(state => {
                 if (state === 'granted') {
+                    // Captura de calibración inicial
+                    window.addEventListener('deviceorientation', (e) => {
+                        if(offsetBeta === 0) {
+                            offsetBeta = e.beta;
+                            offsetGamma = e.gamma;
+                        }
+                    }, { once: true });
+                    
                     window.addEventListener('deviceorientation', handleOrientation, true);
                     initCamera();
                 }
@@ -162,7 +188,6 @@
 
     shutter.addEventListener('click', () => {
         if (!shutter.classList.contains('active')) return;
-        
         shutterSound.play();
         const finalImage = perfectFrame ? perfectFrame : captureCurrentFrame();
         capturedPhotos.push({ id: Date.now(), data: finalImage });
@@ -181,12 +206,25 @@
         capturedPhotos.forEach((photo) => {
             const container = document.createElement('div');
             container.className = 'thumb-container';
-            container.innerHTML = `<img src="${photo.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>`;
+            container.innerHTML = `
+                <img src="${photo.data}" class="thumb-img" onclick="openViewer('${photo.data}')">
+                <button class="remove-thumb" onclick="event.stopPropagation(); removePhoto(${photo.id})">X</button>
+            `;
             thumbBar.appendChild(container);
         });
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
         thumbBar.scrollLeft = thumbBar.scrollWidth;
     }
+
+    window.openViewer = function(src) {
+        viewerImg.src = src;
+        viewerModal.style.display = 'flex';
+    };
+
+    closeViewer.addEventListener('click', () => {
+        viewerModal.style.display = 'none';
+        viewerImg.src = '';
+    });
 
     window.removePhoto = function(id) {
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
