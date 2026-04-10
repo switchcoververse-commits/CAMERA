@@ -35,8 +35,8 @@
 
 <div id="sensor-auth">
     <h2 style="margin-bottom: 10px;">Pro Perspective Calibration</h2>
-    <p>Step 1: Place phone flat on a surface.<br>Step 2: Tap the button to calibrate and start.</p>
-    <button id="auth-btn">CALIBRATE & START</button>
+    <p>Hold your phone steady in any position.<br>Tap to start.</p>
+    <button id="auth-btn">START CAMERA</button>
 </div>
 
 <div id="viewer-modal">
@@ -89,10 +89,6 @@
     let lockTimer = null;
     let isLockActive = false;
 
-    // MODALIDAD CALIBRACIÓN: Almacena el error inicial del sensor
-    let offsetBeta = 0;
-    let offsetGamma = 0;
-
     async function initCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -136,15 +132,17 @@
     function handleOrientation(event) {
         if (isLockActive) return;
 
-        // Aplicación de Calibración (Offset) + Lectura actual
-        const beta = event.beta - offsetBeta;  
-        const gamma = event.gamma - offsetGamma; 
+        const beta = event.beta;  
+        const gamma = event.gamma; 
         
-        // SUAVIZADO: Tolerancia aumentada a 5.0 grados para mayor facilidad
-        const t = 5.0; 
+        // TOLERANCIA FLEXIBLE: Aumentada a 10 grados para facilitar el uso manual
+        const t = 10.0; 
 
+        // PARED: Beta cerca de 90, Gamma cerca de 0
         const checkWall = (Math.abs(beta - 90) < t && Math.abs(gamma) < t);
+        // SUELO: Beta cerca de 0, Gamma cerca de 0
         const checkFloor = (Math.abs(beta) < t && Math.abs(gamma) < t);
+        // TECHO: Beta cerca de 180/-180, Gamma cerca de 0
         const checkCeiling = (Math.abs(Math.abs(beta) - 180) < t && Math.abs(gamma) < t);
 
         if (checkWall || checkFloor || checkCeiling) {
@@ -168,14 +166,6 @@
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission().then(state => {
                 if (state === 'granted') {
-                    // Captura de calibración inicial
-                    window.addEventListener('deviceorientation', (e) => {
-                        if(offsetBeta === 0) {
-                            offsetBeta = e.beta;
-                            offsetGamma = e.gamma;
-                        }
-                    }, { once: true });
-                    
                     window.addEventListener('deviceorientation', handleOrientation, true);
                     initCamera();
                 }
@@ -230,6 +220,29 @@
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
         renderThumbnails();
     };
+
+    // ACCIÓN DEL BOTÓN FINISH ORDER
+    finishBtn.addEventListener('click', async () => {
+        finishBtn.disabled = true;
+        finishBtn.innerText = "SENDING...";
+        
+        const payload = {
+            timestamp: new Date().toISOString(),
+            photos: capturedPhotos.map(p => p.data)
+        };
+
+        try {
+            // Aquí se conectará con el Webhook de Make en el siguiente paso
+            console.log("Payload ready:", payload);
+            alert("Order images captured! Ready for transfer.");
+            // Una vez confirmada la recepción, podrías redirigir al usuario
+            // window.location.href = "SUCCESS_URL";
+        } catch (err) {
+            alert("Upload failed. Try again.");
+            finishBtn.disabled = false;
+            finishBtn.innerText = "FINISH ORDER";
+        }
+    });
 </script>
 </body>
 </html>
