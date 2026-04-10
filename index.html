@@ -131,13 +131,8 @@
 
     function handleOrientation(event) {
         if (isLockActive) return;
-
         const beta = event.beta;  
         const gamma = event.gamma; 
-        
-        // TOLERANCIA DIFERENCIADA:
-        // tV (Vertical/Frontal): 10 grados para facilitar el uso.
-        // tL (Lateral): 3 grados. Si el móvil se inclina a los lados, el clonado falla.
         const tV = 10.0; 
         const tL = 3.0;
 
@@ -149,7 +144,6 @@
             isLeveled = true;
             isLockActive = true;
             updateUI("#00ff00", true);
-
             if (lockTimer) clearTimeout(lockTimer);
             lockTimer = setTimeout(() => {
                 isLockActive = false;
@@ -221,8 +215,9 @@
         renderThumbnails();
     };
 
+    // LOGICA DE ENVÍO CON RESET AUTOMÁTICO
     finishBtn.addEventListener('click', async () => {
-        const originalText = finishBtn.innerText;
+        const originalText = "FINISH ORDER";
         finishBtn.disabled = true;
         finishBtn.innerText = "SENDING...";
         
@@ -233,13 +228,18 @@
         };
 
         try {
-            console.log("Transmission initialized:", payload);
-            // Simulación de envío exitoso hasta tener el Webhook real
+            // SIMULACIÓN DE ENVÍO (Aquí irá el fetch a Make más adelante)
             await new Promise(resolve => setTimeout(resolve, 2000));
-            alert("SUCCESS: Images sent to production.");
-            finishBtn.innerText = "SENT!";
-            // Reset tras éxito opcional
-            // capturedPhotos = []; renderThumbnails();
+            
+            alert("SUCCESS: Images sent to production. Gallery cleared for your next capture.");
+            
+            // RESET TOTAL DEL ESTADO
+            capturedPhotos = [];
+            renderThumbnails();
+            finishBtn.disabled = false;
+            finishBtn.innerText = originalText;
+            finishBtn.style.display = 'none';
+            
         } catch (err) {
             alert("ERROR: Connection lost.");
             finishBtn.disabled = false;
