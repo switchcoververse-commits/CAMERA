@@ -107,6 +107,7 @@
     function startBufferProcessing() {
         const ctx = canvas.getContext('2d');
         const process = () => {
+            // Si el nivelado está activo, guardamos el frame perfecto
             if (isLeveled || isLockActive) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -134,7 +135,7 @@
         const beta = event.beta;  
         const gamma = event.gamma; 
         const tV = 10.0; 
-        const tL = 3.0;
+        const tL = 4.0;
 
         const checkWall = (Math.abs(beta - 90) < tV && Math.abs(gamma) < tL);
         const checkFloor = (Math.abs(beta) < tV && Math.abs(gamma) < tL);
@@ -176,6 +177,11 @@
         const finalImage = perfectFrame ? perfectFrame : captureCurrentFrame();
         capturedPhotos.push({ id: Date.now(), data: finalImage });
         renderThumbnails();
+        
+        // Al disparar, liberamos el bloqueo inmediatamente para que la cámara siga en vivo
+        isLockActive = false;
+        isLeveled = false;
+        updateUI("#ff0000", false);
     });
 
     function captureCurrentFrame() {
@@ -215,27 +221,26 @@
         renderThumbnails();
     };
 
-    // LOGICA DE ENVÍO CON RESET AUTOMÁTICO
     finishBtn.addEventListener('click', async () => {
         const originalText = "FINISH ORDER";
         finishBtn.disabled = true;
         finishBtn.innerText = "SENDING...";
         
-        const payload = {
-            timestamp: new Date().toISOString(),
-            photoCount: capturedPhotos.length,
-            photos: capturedPhotos.map(p => p.data)
-        };
-
         try {
-            // SIMULACIÓN DE ENVÍO (Aquí irá el fetch a Make más adelante)
+            // SIMULACIÓN DE ENVÍO
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            alert("SUCCESS: Images sent to production. Gallery cleared for your next capture.");
+            alert("SUCCESS: Images sent. System ready for new captures.");
             
-            // RESET TOTAL DEL ESTADO
+            // RESET CRÍTICO PARA ELIMINAR LA IMAGEN FIJA
             capturedPhotos = [];
+            perfectFrame = null;
+            isLockActive = false;
+            isLeveled = false;
+            
             renderThumbnails();
+            updateUI("#ff0000", false);
+            
             finishBtn.disabled = false;
             finishBtn.innerText = originalText;
             finishBtn.style.display = 'none';
