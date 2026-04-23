@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro AI V27 - Ultra Validation</title>
+    <title>CamoPro - Checkout Flow</title>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; overflow: hidden; color: #fff; }
-        #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
-        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.8); text-align: center; border-bottom: 1px solid #222; }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; color: #fff; overflow-x: hidden; }
+        
+        /* Contenedores Principales */
+        #camera-view { display: flex; flex-direction: column; height: 100vh; }
+        #order-view { display: none; min-height: 100vh; background: #111; padding: 25px; box-sizing: border-box; }
+
+        /* UI de Cámara (V23) */
+        .header { padding: 15px; text-align: center; border-bottom: 1px solid #222; background: #000; }
         #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 70px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
         .thumb-container { position: relative; min-width: 55px; height: 55px; }
         .thumb-img { width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1.5px solid #555; }
@@ -15,85 +20,106 @@
         #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 15px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
         #fixed-guide { position: absolute; width: 110px; height: 150px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
-        #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
+        #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; }
         #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
-        .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; z-index: 10; }
-        #proceed-btn { background: #00ff00; color: #000; border: none; padding: 18px 45px; border-radius: 30px; font-weight: 800; cursor: pointer; display: none; }
-        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
-        #auth-btn { background: #fff; color: #000; padding: 18px 45px; border-radius: 35px; border: none; font-weight: bold; font-size: 16px; margin-top: 25px; width: 80%; }
-        #analysis-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .loader { border: 4px solid #333; border-top: 4px solid #00ff00; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Formulario y Checkout */
+        .section-title { color: #00ff00; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: block; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        input { width: 100%; padding: 15px; background: #222; border: 1px solid #333; border-radius: 10px; color: #fff; font-size: 16px; box-sizing: border-box; }
+        input:focus { border-color: #00ff00; outline: none; }
+        
+        .summary-card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 25px; }
+        .summary-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .total-row { border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 18px; color: #00ff00; }
+
+        /* Botones */
+        .btn-main { background: #00ff00; color: #000; border: none; padding: 18px; border-radius: 30px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; font-size: 14px; }
+        .btn-secondary { background: transparent; color: #888; border: none; padding: 10px; width: 100%; cursor: pointer; font-size: 12px; margin-top: 10px; }
+
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
     </style>
 </head>
 <body>
 
-<div id="analysis-overlay">
-    <div class="loader"></div>
-    <h2 id="analysis-step" style="color: #00ff00; font-size: 18px;">AI ANALYZING...</h2>
-    <p id="analysis-detail" style="color: #aaa; font-size: 14px;">Point 1: Checking Sharpness</p>
-</div>
-
 <div id="sensor-auth">
-    <h2 style="color: #00ff00;">SMART SCANNER V27</h2>
-    <p style="color: #ccc;">High-Precision validation active.</p>
-    <button id="auth-btn">ENABLE SYSTEM</button>
+    <h2 style="color: #00ff00;">CAMOPRO V23</h2>
+    <p>Enable sensors to start scanning.</p>
+    <button class="btn-main" id="start-btn">ENABLE SYSTEM</button>
 </div>
 
-<div id="camera-container">
-    <div class="header"><span style="font-weight: 800; color: #00ff00;">AI VALIDATION MODE</span></div>
+<div id="camera-view">
+    <div class="header"><span style="font-weight: 800; color: #00ff00;">SCAN OUTLET</span></div>
     <div id="thumbnail-bar"></div>
     <div id="viewport">
         <div id="status-msg">AIM AT OUTLET</div>
         <video id="video" autoplay playsinline muted></video>
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
-        <canvas id="canvas" style="display:none;"></canvas>
     </div>
-    <div class="footer">
-        <button id="proceed-btn">PROCEED TO ORDER</button>
+    <div style="padding: 20px; text-align: center;">
+        <button id="next-step-btn" class="btn-main" style="display: none;">CONTINUE TO CHECKOUT</button>
     </div>
 </div>
+
+<div id="order-view">
+    <span class="section-title">Shipping Details</span>
+    <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="name" placeholder="John Doe">
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="john@example.com">
+    </div>
+    <div class="form-group">
+        <label>Full Address</label>
+        <input type="text" id="address" placeholder="123 Street, City, ZIP">
+    </div>
+
+    <span class="section-title">Order Summary</span>
+    <div class="summary-card">
+        <div class="summary-item">
+            <span>Captured Units:</span>
+            <span id="sum-count">0</span>
+        </div>
+        <div class="summary-item">
+            <span>Price per unit:</span>
+            <span>$45.00</span>
+        </div>
+        <div class="total-row summary-item">
+            <span>TOTAL:</span>
+            <span id="sum-total">$0.00</span>
+        </div>
+    </div>
+
+    <button class="btn-main" id="pay-now-btn">PAY WITH STRIPE / CARD</button>
+    <button class="btn-secondary" onclick="location.reload()">Return to Scanner</button>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
 
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const thumbBar = document.getElementById('thumbnail-bar');
-    const proceedBtn = document.getElementById('proceed-btn');
+    const nextStepBtn = document.getElementById('next-step-btn');
     const dynamicGuide = document.getElementById('dynamic-guide');
     const statusMsg = document.getElementById('status-msg');
-    const authBtn = document.getElementById('auth-btn');
-    const camContainer = document.getElementById('camera-container');
-    const overlay = document.getElementById('analysis-overlay');
-    const stepTxt = document.getElementById('analysis-step');
-    const detailTxt = document.getElementById('analysis-detail');
     
     let capturedPhotos = [];
     let isLocked = false;
     let hasLeftZone = true;
+    const UNIT_PRICE = 45.0;
 
-    function playShutter() {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
-
+    // --- Lógica de Cámara V23 ---
     async function initCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-                document.getElementById('sensor-auth').style.display = 'none';
-                camContainer.style.visibility = 'visible';
-            };
-        } catch (err) { alert("Camera Access Error"); }
+            document.getElementById('sensor-auth').style.display = 'none';
+        } catch (err) { alert("Camera error"); }
     }
 
     function handleOrientation(event) {
@@ -109,8 +135,8 @@
         if (diffV < 4 && diffL < 4) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
-                statusMsg.innerText = "HOLD STEADY...";
-                startValidationFlow();
+                statusMsg.innerText = "ALIGNED ✓";
+                capturePhoto();
             }
         } else {
             hasLeftZone = true;
@@ -119,85 +145,21 @@
         }
     }
 
-    async function startValidationFlow() {
+    function capturePhoto() {
         isLocked = true;
         hasLeftZone = false;
-        overlay.style.display = 'flex';
         
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        try {
-            // 1. SHARPNESS (Nitidez)
-            stepTxt.innerText = "CHECKING SHARPNESS...";
-            await new Promise(r => setTimeout(r, 600));
-            if (!checkSharpness(imageData)) throw "IMAGE BLURRY - HOLD STEADY";
-
-            // 2. LIGHTING (Iluminación)
-            stepTxt.innerText = "CHECKING LIGHTING...";
-            await new Promise(r => setTimeout(r, 600));
-            if (!checkLighting(imageData)) throw "POOR LIGHTING OR GLARE DETECTED";
-
-            // 3. DETECTION (Presencia de Outlet)
-            stepTxt.innerText = "SEARCHING FOR OUTLET...";
-            await new Promise(r => setTimeout(r, 600));
-            if (!checkDetection(imageData)) throw "NO OUTLET DETECTED IN FRAME";
-
-            // 4. PERSPECTIVE (Confirmada por giroscopio + análisis centro)
-            stepTxt.innerText = "VERIFYING PERSPECTIVE...";
-            await new Promise(r => setTimeout(r, 600));
-            
-            // SUCCESS
-            playShutter();
-            capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
-            renderThumbnails();
-            overlay.style.display = 'none';
-            isLocked = false;
-
-        } catch (error) {
-            stepTxt.innerText = "REJECTED";
-            stepTxt.style.color = "#ff4444";
-            detailTxt.innerText = error;
-            await new Promise(r => setTimeout(r, 2000));
-            overlay.style.display = 'none';
-            stepTxt.style.color = "#00ff00";
-            isLocked = false;
-        }
+        
+        capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
+        renderThumbs();
+        setTimeout(() => { isLocked = false; }, 1000);
     }
 
-    function checkSharpness(img) {
-        let diff = 0;
-        const data = img.data;
-        for (let i = 0; i < data.length; i += 40) {
-            diff += Math.abs(data[i] - data[i + 4]);
-        }
-        return (diff / (data.length / 40)) > 5; 
-    }
-
-    function checkLighting(img) {
-        let total = 0;
-        const data = img.data;
-        for (let i = 0; i < data.length; i += 20) {
-            total += (data[i] + data[i+1] + data[i+2]) / 3;
-        }
-        const avg = total / (data.length / 20);
-        return avg > 40 && avg < 220; // Ni muy oscuro ni quemado
-    }
-
-    function checkDetection(img) {
-        // Buscamos cambios bruscos de contraste en el centro (típico de un outlet)
-        const centerStart = (img.width * img.height / 2) * 4;
-        let contrast = 0;
-        for (let i = centerStart; i < centerStart + 4000; i += 4) {
-            contrast += Math.abs(img.data[i] - img.data[i-4]);
-        }
-        return contrast > 500;
-    }
-
-    function renderThumbnails() {
+    function renderThumbs() {
         thumbBar.innerHTML = '';
         capturedPhotos.forEach(p => {
             const div = document.createElement('div');
@@ -205,21 +167,40 @@
             div.innerHTML = `<img src="${p.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>`;
             thumbBar.appendChild(div);
         });
-        proceedBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
+        nextStepBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
     }
 
     window.removePhoto = (id) => {
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
-        renderThumbnails();
+        renderThumbs();
     };
 
-    authBtn.addEventListener('click', () => {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(s => { if(s==='granted') { window.addEventListener('deviceorientation', handleOrientation); initCamera(); } });
+    // --- Navegación al Checkout ---
+    nextStepBtn.addEventListener('click', () => {
+        // Detener cámara para ahorrar recursos
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        
+        document.getElementById('camera-view').style.display = 'none';
+        document.getElementById('order-view').style.display = 'block';
+        
+        // Actualizar Resumen
+        document.getElementById('sum-count').innerText = capturedPhotos.length;
+        document.getElementById('sum-total').innerText = `$${(capturedPhotos.length * UNIT_PRICE).toFixed(2)}`;
+    });
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(s => { 
+                if(s==='granted') { window.addEventListener('deviceorientation', handleOrientation); initCamera(); } 
+            });
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    proceedBtn.addEventListener('click', () => alert("Proceeding to Order Form..."));
+    document.getElementById('pay-now-btn').addEventListener('click', () => {
+        const name = document.getElementById('name').value;
+        if (!name) return alert("Please enter your name");
+        alert("Connecting to Payment Gateway...");
+    });
 </script>
 </body>
 </html>
