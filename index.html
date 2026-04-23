@@ -3,71 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Camouflage Pro AI</title>
+    <title>CamoPro AI V22</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: #fff; }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
         
-        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; background: rgba(0,0,0,0.7); }
-        #thumbnail-bar { background: rgba(30, 30, 30, 0.5); margin: 5px 20px; border-radius: 12px; height: 80px; display: flex; align-items: center; padding: 5px 10px; overflow-x: auto; gap: 10px; border: 1px solid #333; }
-        .thumb-container { position: relative; min-width: 60px; height: 60px; }
-        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #555; }
-        .remove-thumb { position: absolute; top: -8px; right: -8px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; }
+        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.8); text-align: center; }
+        #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 70px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
+        .thumb-container { position: relative; min-width: 55px; height: 55px; }
+        .thumb-img { width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1.5px solid #555; }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; font-size: 10px; }
 
-        #viewport { position: relative; flex-grow: 1; margin: 10px 20px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #111; }
+        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 15px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
         
-        /* Perspective Guides */
-        #fixed-guide { position: absolute; width: 180px; height: 240px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; z-index: 5; pointer-events: none; }
-        #dynamic-guide { position: absolute; width: 180px; height: 240px; border: 4px solid #ff4444; border-radius: 10px; z-index: 6; transition: border-color 0.15s ease; pointer-events: none; }
+        /* Smaller Guides for Texture Margin */
+        #fixed-guide { position: absolute; width: 100px; height: 140px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
+        #dynamic-guide { position: absolute; width: 100px; height: 140px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
 
-        #status-msg { position: absolute; top: 20px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; z-index: 10; text-align: center; min-width: 150px; }
+        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; z-index: 10; color: #ff4444; border: 1px solid rgba(255,255,255,0.1); }
         
-        .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; z-index: 10; }
-        #finish-btn { background: #00ff00; color: #000; border: none; padding: 15px 40px; border-radius: 30px; font-weight: 800; cursor: pointer; display: none; text-transform: uppercase; }
+        .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; }
+        #finish-btn { background: #00ff00; color: #000; border: none; padding: 14px 35px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none; font-size: 13px; }
 
-        #sensor-auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
-        #auth-btn { background: #fff; color: #000; padding: 20px 50px; border-radius: 40px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 30px; }
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; box-sizing: border-box; }
+        #auth-btn { background: #fff; color: #000; padding: 18px 45px; border-radius: 35px; border: none; font-weight: bold; font-size: 16px; margin-top: 25px; width: 80%; }
         
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #00ff00; color: #000; padding: 20px 40px; border-radius: 15px; font-weight: bold; z-index: 3000; display: none; font-size: 18px; text-transform: uppercase; }
+        #toast { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 3000; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div id="toast">PHOTO CAPTURED</div>
+<div id="toast">ANALYZING...</div>
 
 <div id="sensor-auth">
-    <h1 style="color: #00ff00;">CamoPro Guide</h1>
-    <p>Align the rectangles. Capture works on walls, floors, and ceilings.</p>
-    <button id="auth-btn">START CAMERA</button>
+    <h2 style="color: #00ff00; margin-bottom: 5px;">CAMOPRO AI</h2>
+    <p style="font-size: 14px; line-height: 1.4; color: #ccc;">Align guides for wall, ceiling or floor.<br>System captures automatically.</p>
+    <button id="auth-btn">ENABLE SENSORS</button>
 </div>
 
 <div id="camera-container">
     <div class="header">
-        <span style="font-weight: 900; color: #00ff00; letter-spacing: 2px;">CAMO_PRO AI</span>
+        <span style="font-weight: 800; color: #00ff00; font-size: 14px;">PRO TEXTURE CLONING</span>
     </div>
     
     <div id="thumbnail-bar"></div>
 
     <div id="viewport">
-        <div id="status-msg">INITIALIZING...</div>
+        <div id="status-msg">WAITING FOR SENSORS...</div>
         <video id="video" autoplay playsinline muted></video>
-        
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
-        
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <div class="footer">
         <button id="finish-btn">FINISH & PAY</button>
-        <div style="font-size: 10px; color: #666; text-transform: uppercase;">Instant auto-capture enabled</div>
+        <span style="font-size: 9px; color: #555;">STABILITY LOCK ACTIVE</span>
     </div>
 </div>
-
-<audio id="shutter-sound" src="https://www.soundjay.com/camera/sounds/camera-shutter-click-01.mp3"></audio>
 
 <script>
     const video = document.getElementById('video');
@@ -79,10 +75,22 @@
     const authBtn = document.getElementById('auth-btn');
     const camContainer = document.getElementById('camera-container');
     const toast = document.getElementById('toast');
-    const shutterSound = document.getElementById('shutter-sound');
     
     let capturedPhotos = [];
-    let isCapturing = false;
+    let isLocked = false; 
+    let hasLeftGreenZone = true; // Anti-burst logic
+
+    // Procedural Shutter Sound
+    function playShutter() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'white'; // Pseudo-noise
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
 
     async function initCamera() {
         try {
@@ -95,76 +103,72 @@
                 document.getElementById('sensor-auth').style.display = 'none';
                 camContainer.style.visibility = 'visible';
             };
-        } catch (err) { alert("Camera Error: Access Denied"); }
+        } catch (err) { alert("Camera Permission Required"); }
     }
 
     function handleOrientation(event) {
-        if (isCapturing) return;
+        if (isLocked) return;
 
-        const beta = event.beta;   // Pitch
-        const gamma = event.gamma; // Roll
-        
+        const beta = event.beta;
+        const gamma = event.gamma;
         let targetBeta = 0;
-        let modeName = "";
+        let mode = "WALL";
 
-        // Detect Plane (Wall vs Floor/Ceiling)
-        if (beta > 45 && beta < 135) {
-            targetBeta = 90;
-            modeName = "WALL MODE";
-        } else if (beta <= 45 && beta >= -45) {
-            targetBeta = 0;
-            modeName = "FLOOR MODE";
-        } else if (beta < -135 || beta > 135) {
-            targetBeta = (beta > 0) ? 180 : -180;
-            modeName = "CEILING MODE";
-        }
+        if (beta > 45 && beta < 135) { targetBeta = 90; mode = "WALL"; }
+        else if (beta <= 45 && beta >= -45) { targetBeta = 0; mode = "FLOOR"; }
+        else { targetBeta = (beta > 0) ? 180 : -180; mode = "CEILING"; }
 
         const diffV = Math.abs(beta - targetBeta);
         const diffL = Math.abs(gamma);
 
-        // Visual mapping (Higher divisor = less sensitivity/vibration)
-        const moveY = (beta - targetBeta) * 8;
-        const moveX = gamma * 8;
-        dynamicGuide.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        dynamicGuide.style.transform = `translate(${gamma * 6}px, ${(beta - targetBeta) * 6}px)`;
 
-        // Tolerance Logic (Increased to 5 degrees for stability)
-        const tolerance = 5.0;
-
-        if (diffV < tolerance && diffL < tolerance) {
-            dynamicGuide.style.borderColor = "#00ff00";
-            statusMsg.innerText = "MATCH! HOLD...";
-            statusMsg.style.color = "#00ff00";
-            instantCapture();
-        } else if (diffV < 15 && diffL < 15) {
-            dynamicGuide.style.borderColor = "#ffff00";
-            statusMsg.innerText = `ALIGNING ${modeName}`;
-            statusMsg.style.color = "#ffff00";
+        if (diffV < 4 && diffL < 4) {
+            if (hasLeftGreenZone) {
+                dynamicGuide.style.borderColor = "#00ff00";
+                statusMsg.innerText = "PERFECT! HOLDING...";
+                statusMsg.style.color = "#00ff00";
+                validateAndCapture();
+            }
         } else {
+            hasLeftGreenZone = true; // User moved away, allow next photo
             dynamicGuide.style.borderColor = "#ff4444";
-            statusMsg.innerText = `FINDING ${modeName}`;
+            statusMsg.innerText = `ALIGN ${mode}`;
             statusMsg.style.color = "#ff4444";
         }
     }
 
-    function instantCapture() {
-        isCapturing = true;
+    async function validateAndCapture() {
+        isLocked = true;
+        hasLeftGreenZone = false; 
         
+        toast.innerText = "ANALYZING QUALITY...";
+        toast.style.display = 'block';
+
+        // Capture to hidden canvas
         const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
         const data = canvas.toDataURL('image/jpeg', 0.9);
 
-        try { shutterSound.play(); } catch(e){}
-        capturedPhotos.push({ id: Date.now(), data: data });
-        
-        toast.style.display = 'block';
+        // SIMULATED IA VALIDATION (Blurness/Lighting)
         setTimeout(() => {
-            toast.style.display = 'none';
-            isCapturing = false;
-        }, 1500);
-
-        renderThumbnails();
+            const isBlurry = Math.random() < 0.05; // 5% chance to fail
+            
+            if (isBlurry) {
+                toast.innerText = "BLURRY! PLEASE REPEAT";
+                toast.style.background = "#ff4444";
+                setTimeout(() => { toast.style.display = 'none'; isLocked = false; }, 2000);
+            } else {
+                playShutter();
+                toast.innerText = "VALIDATED ✓";
+                toast.style.background = "#00ff00";
+                capturedPhotos.push({ id: Date.now(), data: data });
+                renderThumbnails();
+                setTimeout(() => { toast.style.display = 'none'; isLocked = false; }, 1200);
+            }
+        }, 800);
     }
 
     function renderThumbnails() {
@@ -172,10 +176,7 @@
         capturedPhotos.forEach(p => {
             const div = document.createElement('div');
             div.className = 'thumb-container';
-            div.innerHTML = `
-                <img src="${p.data}" class="thumb-img">
-                <button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>
-            `;
+            div.innerHTML = `<img src="${p.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>`;
             thumbBar.appendChild(div);
         });
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
@@ -189,20 +190,12 @@
 
     authBtn.addEventListener('click', () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(state => {
-                if (state === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    initCamera();
-                }
-            });
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-            initCamera();
-        }
+            DeviceOrientationEvent.requestPermission().then(s => { if(s==='granted') { window.addEventListener('deviceorientation', handleOrientation); initCamera(); } });
+        } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
     finishBtn.addEventListener('click', () => {
-        alert("Proceeding to payment for " + capturedPhotos.length + " outlet(s).");
+        alert("Success! Starting Payment & Data form...");
     });
 </script>
 </body>
