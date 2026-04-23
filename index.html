@@ -1,62 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Camouflage Pro Camera</title>
+    <title>Camouflage Pro AI</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; color: #fff; }
+        body { margin: 0; padding: 0; background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
-        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; gap: 10px; background: rgba(0,0,0,0.5); }
-        .back-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; text-decoration: none; display: flex; align-items: center; }
-        .back-text { font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
-        #thumbnail-bar { background: rgba(40, 40, 40, 0.8); margin: 5px 20px; border-radius: 8px; height: 80px; display: flex; align-items: center; padding: 5px 10px; overflow-x: auto; gap: 10px; z-index: 5; }
+        
+        /* Header & Gallery */
+        .header { display: flex; align-items: center; padding: 15px 20px; z-index: 10; background: rgba(0,0,0,0.7); }
+        #thumbnail-bar { background: rgba(30, 30, 30, 0.5); margin: 5px 20px; border-radius: 12px; height: 80px; display: flex; align-items: center; padding: 5px 10px; overflow-x: auto; gap: 10px; border: 1px solid #333; }
         .thumb-container { position: relative; min-width: 60px; height: 60px; }
-        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #555; cursor: pointer; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff0000; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; font-weight: bold; z-index: 6; }
-        #viewport { position: relative; flex-grow: 1; margin: 10px 20px; overflow: hidden; border-radius: 12px; border: 8px solid #ff0000; transition: border-color 0.1s ease; display: flex; justify-content: center; align-items: center; background: #111; }
-        video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
-        #crosshair { position: relative; width: 50px; height: 50px; z-index: 10; pointer-events: none; }
-        .cross-line { position: absolute; background: #ff0000; transition: background 0.1s ease; }
-        .v-line { left: 24px; top: 0; width: 3px; height: 100%; }
-        .h-line { top: 24px; left: 0; width: 100%; height: 3px; }
+        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #555; }
+        .remove-thumb { position: absolute; top: -8px; right: -8px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; }
+
+        /* Viewport & Guides */
+        #viewport { position: relative; flex-grow: 1; margin: 10px 20px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #111; }
+        video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
+        
+        /* Capa de Guía Fija */
+        #fixed-guide { position: absolute; width: 160px; height: 240px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 10px; z-index: 5; pointer-events: none; }
+        
+        /* Capa de Guía Dinámica (Sensor) */
+        #dynamic-guide { position: absolute; width: 160px; height: 240px; border: 4px solid #ff4444; border-radius: 10px; z-index: 6; transition: transform 0.05s linear, border-color 0.2s ease; pointer-events: none; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+
+        /* Status UI */
+        #status-msg { position: absolute; top: 20px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; z-index: 10; }
+        
         .footer { display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; gap: 15px; z-index: 10; }
-        #shutter { width: 70px; height: 70px; background: #555; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; cursor: not-allowed; transition: all 0.2s ease; opacity: 0.5; }
-        #shutter.active { background: #fff; cursor: pointer; opacity: 1; border: 5px solid #00ff00; }
-        #finish-btn { background: #00ff00; color: #000; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; display: none; text-transform: uppercase; }
-        #sensor-auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
-        #auth-btn { background: #fff; color: #000; padding: 20px 40px; border-radius: 40px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 20px; }
-        /* TOAST NOTIFICATION */
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,255,0,0.9); color: #000; padding: 20px 30px; border-radius: 10px; font-weight: bold; z-index: 3000; display: none; text-align: center; }
+        #finish-btn { background: #00ff00; color: #000; border: none; padding: 15px 40px; border-radius: 30px; font-weight: 800; cursor: pointer; display: none; box-shadow: 0 4px 15px rgba(0,255,0,0.3); }
+
+        /* Calibration Screen */
+        #sensor-auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
+        #auth-btn { background: #fff; color: #000; padding: 20px 50px; border-radius: 40px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 30px; }
+        
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #00ff00; color: #000; padding: 25px 40px; border-radius: 15px; font-weight: bold; z-index: 3000; display: none; font-size: 20px; box-shadow: 0 0 30px rgba(0,255,0,0.5); }
     </style>
 </head>
 <body>
 
-<div id="toast">ORDER SENT!</div>
+<div id="toast">FOTO CAPTURADA</div>
 
 <div id="sensor-auth">
-    <h2 style="margin-bottom: 10px;">Pro Perspective Calibration</h2>
-    <p>Calibrating sensors for texture cloning.<br>Tap to start.</p>
-    <button id="auth-btn">START CAMERA</button>
+    <h1 style="color: #00ff00;">Perspective Guide</h1>
+    <p>Alinea los rectángulos para capturar el outlet con precisión perfecta.</p>
+    <button id="auth-btn">EMPEZAR</button>
 </div>
 
 <div id="camera-container">
     <div class="header">
-        <a href="#" class="back-btn">&lt;</a>
-        <span class="back-text">Back to online store</span>
+        <span style="font-weight: 900; color: #00ff00; letter-spacing: 2px;">CAMO_PRO</span>
     </div>
+    
     <div id="thumbnail-bar"></div>
+
     <div id="viewport">
+        <div id="status-msg">BUSCANDO NIVEL...</div>
         <video id="video" autoplay playsinline muted></video>
-        <div id="crosshair">
-            <div class="cross-line v-line" id="v-line"></div>
-            <div class="cross-line h-line" id="h-line"></div>
-        </div>
+        
+        <div id="fixed-guide"></div>
+        <div id="dynamic-guide"></div>
+        
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
+
     <div class="footer">
-        <button id="finish-btn">FINISH ORDER</button>
-        <div id="shutter"></div>
+        <button id="finish-btn">FINALIZAR Y PAGAR</button>
+        <div style="font-size: 10px; color: #666;">AUTOCAPTURA ACTIVADA AL NIVELAR</div>
     </div>
 </div>
 
@@ -65,22 +78,19 @@
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const shutter = document.getElementById('shutter');
-    const shutterSound = document.getElementById('shutter-sound');
     const thumbBar = document.getElementById('thumbnail-bar');
     const finishBtn = document.getElementById('finish-btn');
     const viewport = document.getElementById('viewport');
-    const vLine = document.getElementById('v-line');
-    const hLine = document.getElementById('h-line');
-    const authScreen = document.getElementById('sensor-auth');
+    const dynamicGuide = document.getElementById('dynamic-guide');
+    const statusMsg = document.getElementById('status-msg');
     const authBtn = document.getElementById('auth-btn');
     const camContainer = document.getElementById('camera-container');
     const toast = document.getElementById('toast');
+    const shutterSound = document.getElementById('shutter-sound');
     
     let capturedPhotos = [];
-    let isLeveled = false;
-    let isLockActive = false;
-    let lockTimer = null;
+    let isAutoCapturing = false;
+    let greenTimeStart = null;
 
     async function initCamera() {
         try {
@@ -90,135 +100,117 @@
             video.srcObject = stream;
             video.onloadedmetadata = () => {
                 video.play();
-                authScreen.style.display = 'none';
+                document.getElementById('sensor-auth').style.display = 'none';
                 camContainer.style.visibility = 'visible';
             };
-        } catch (err) { console.error("Camera error"); }
-    }
-
-    function showToast(text, color = "rgba(0,255,0,0.9)") {
-        toast.innerText = text;
-        toast.style.background = color;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 2500);
-    }
-
-    function updateUI(color, canShoot) {
-        viewport.style.borderColor = color;
-        vLine.style.background = color;
-        hLine.style.background = color;
-        if (canShoot) {
-            shutter.classList.add('active');
-        } else {
-            shutter.classList.remove('active');
-        }
+        } catch (err) { alert("Error de cámara"); }
     }
 
     function handleOrientation(event) {
-        if (isLockActive) return;
-        const beta = event.beta;  
-        const gamma = event.gamma; 
-        const tV = 10.0; 
-        const tL = 4.0;
+        if (isAutoCapturing) return;
 
-        const checkWall = (Math.abs(beta - 90) < tV && Math.abs(gamma) < tL);
-        const checkFloor = (Math.abs(beta) < tV && Math.abs(gamma) < tL);
-        const checkCeiling = (Math.abs(Math.abs(beta) - 180) < tV && Math.abs(gamma) < tL);
+        const beta = event.beta;  // Adelante/Atrás (-180 a 180)
+        const gamma = event.gamma; // Izquierda/Derecha (-90 a 90)
 
-        if (checkWall || checkFloor || checkCeiling) {
-            isLeveled = true;
-            isLockActive = true;
-            updateUI("#00ff00", true);
-            if (lockTimer) clearTimeout(lockTimer);
-            lockTimer = setTimeout(() => {
-                isLockActive = false;
-                isLeveled = false;
-                updateUI("#ff0000", false);
-            }, 3000);
+        // Calculamos desplazamiento visual para el rectángulo guía
+        // Mapeamos los grados a píxeles (sensibilidad)
+        const moveY = (beta - 90) * 10; 
+        const moveX = gamma * 10;
+
+        dynamicGuide.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+        // LÓGICA DE SEMÁFORO
+        const diffV = Math.abs(beta - 90);
+        const diffL = Math.abs(gamma);
+
+        if (diffV < 3 && diffL < 3) {
+            // VERDE: Alineación perfecta
+            dynamicGuide.style.borderColor = "#00ff00";
+            statusMsg.innerText = "¡MANTÉN LA POSICIÓN!";
+            statusMsg.style.color = "#00ff00";
+            
+            if (!greenTimeStart) greenTimeStart = Date.now();
+            
+            // Si mantiene 1.2 segundos en verde, dispara solo
+            if (Date.now() - greenTimeStart > 1200) {
+                autoCapture();
+            }
+        } else if (diffV < 10 && diffL < 10) {
+            // AMARILLO: Cerca
+            dynamicGuide.style.borderColor = "#ffff00";
+            statusMsg.innerText = "CASI LISTO...";
+            statusMsg.style.color = "#ffff00";
+            greenTimeStart = null;
         } else {
-            isLeveled = false;
-            updateUI("#ff0000", false);
+            // ROJO: Lejos
+            dynamicGuide.style.borderColor = "#ff4444";
+            statusMsg.innerText = "AJUSTA PERSPECTIVA";
+            statusMsg.style.color = "#ff4444";
+            greenTimeStart = null;
         }
     }
 
-    authBtn.addEventListener('click', () => {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(state => {
-                if (state === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation, true);
-                    initCamera();
-                }
-            }).catch(initCamera);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-            initCamera();
-        }
-    });
-
-    shutter.addEventListener('click', () => {
-        if (!shutter.classList.contains('active')) return;
+    function autoCapture() {
+        isAutoCapturing = true;
+        greenTimeStart = null;
         
+        // Captura
         const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        const photoData = canvas.toDataURL('image/jpeg', 0.9);
+        const data = canvas.toDataURL('image/jpeg', 0.9);
 
         shutterSound.play();
-        capturedPhotos.push({ id: Date.now(), data: photoData });
-        renderThumbnails();
+        capturedPhotos.push({ id: Date.now(), data: data });
         
-        isLockActive = false;
-        isLeveled = false;
-        updateUI("#ff0000", false);
-    });
+        // Feedback visual
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+            isAutoCapturing = false;
+        }, 2000);
+
+        renderThumbnails();
+    }
 
     function renderThumbnails() {
         thumbBar.innerHTML = '';
-        capturedPhotos.forEach((photo) => {
-            const container = document.createElement('div');
-            container.className = 'thumb-container';
-            container.innerHTML = `
-                <img src="${photo.data}" class="thumb-img">
-                <button class="remove-thumb" onclick="removePhoto(${photo.id})">X</button>
+        capturedPhotos.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'thumb-container';
+            div.innerHTML = `
+                <img src="${p.data}" class="thumb-img">
+                <button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>
             `;
-            thumbBar.appendChild(container);
+            thumbBar.appendChild(div);
         });
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
         thumbBar.scrollLeft = thumbBar.scrollWidth;
     }
 
-    window.removePhoto = function(id) {
+    window.removePhoto = (id) => {
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
         renderThumbnails();
     };
 
-    finishBtn.addEventListener('click', async () => {
-        finishBtn.disabled = true;
-        finishBtn.innerText = "SENDING...";
-        
-        try {
-            // SIMULACIÓN WEBHOOK
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            showToast("ORDER SENT!");
-            
-            // RESET SIN ALERTAS BLOQUEANTES
-            capturedPhotos = [];
-            renderThumbnails();
-            
-            isLockActive = false;
-            isLeveled = false;
-            updateUI("#ff0000", false);
-            
-            finishBtn.disabled = false;
-            finishBtn.innerText = "FINISH ORDER";
-            finishBtn.style.display = 'none';
-            
-        } catch (err) {
-            showToast("ERROR!", "#ff0000");
-            finishBtn.disabled = false;
+    authBtn.addEventListener('click', () => {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(state => {
+                if (state === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    initCamera();
+                }
+            });
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+            initCamera();
         }
+    });
+
+    finishBtn.addEventListener('click', () => {
+        // Aquí conectaremos con el formulario y Stripe
+        alert("Iniciando proceso de pago para " + capturedPhotos.length + " capturas.");
     });
 </script>
 </body>
