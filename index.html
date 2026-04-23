@@ -110,6 +110,7 @@
     let isLocked = false;
     let hasLeftZone = true;
     const PRICE_UNIT = 45;
+    const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/54xeiu9j4733vbvnfjm7lah2u4wkjm1r';
 
     // --- LÓGICA DE CÁMARA (BASE V23) ---
     async function initCamera() {
@@ -225,12 +226,14 @@
                 total_price: selectedImages.length * PRICE_UNIT,
                 timestamp: new Date().toISOString()
             },
-            assets: selectedImages.map(img => img.data.split(',')[1]) // Solo Base64 puro
+            assets: selectedImages.map(img => ({
+                id: img.id,
+                base64: img.data.split(',')[1]
+            }))
         };
 
         try {
-            // INTEGRACIÓN WEBHOOK MAKE.COM
-            const response = await fetch('TU_WEBHOOK_URL_DE_MAKE', {
+            const response = await fetch(MAKE_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -239,7 +242,8 @@
             if (response.ok) {
                 btn.innerText = "REDIRECTING TO PAYMENT...";
                 setTimeout(() => {
-                    window.location.href = "URL_STRIPE_CHECKOUT";
+                    // Aquí iría tu link de Stripe
+                    alert("Order sent to Make successfully!");
                 }, 1000);
             } else { throw new Error(); }
 
