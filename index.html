@@ -3,51 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro AI V26</title>
+    <title>CamoPro AI V23-Fixed</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
-        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.85); text-align: center; border-bottom: 1px solid #333; }
-        #thumbnail-bar { background: rgba(25, 25, 25, 0.7); margin: 5px 15px; border-radius: 12px; height: 75px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #444; }
-        .thumb-container { position: relative; min-width: 60px; height: 60px; }
-        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #555; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: bold; cursor: pointer; z-index: 20; }
-        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #333; }
+        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.8); text-align: center; border-bottom: 1px solid #222; }
+        #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 70px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
+        .thumb-container { position: relative; min-width: 55px; height: 55px; }
+        .thumb-img { width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1.5px solid #555; }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; font-size: 10px; }
+        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 15px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        #fixed-guide { position: absolute; width: 130px; height: 170px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; z-index: 5; }
-        #dynamic-guide { position: absolute; width: 130px; height: 170px; border: 4px solid #ff4444; border-radius: 10px; z-index: 6; transition: border-color 0.2s, transform 0.1s ease-out; }
-        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; text-align: center; }
+        #fixed-guide { position: absolute; width: 110px; height: 150px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
+        #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
+        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
         .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; }
-        #finish-btn { background: #00ff00; color: #000; border: none; padding: 15px 45px; border-radius: 30px; font-weight: 900; cursor: pointer; display: none; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,255,0,0.3); }
-        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
-        #auth-btn { background: #fff; color: #000; padding: 20px 60px; border-radius: 40px; border: none; font-weight: 900; font-size: 18px; margin-top: 30px; width: 100%; max-width: 300px; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 20px 35px; border-radius: 15px; font-weight: bold; z-index: 3000; display: none; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        #finish-btn { background: #00ff00; color: #000; border: none; padding: 14px 35px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none; font-size: 13px; }
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
+        #auth-btn { background: #fff; color: #000; padding: 18px 45px; border-radius: 35px; border: none; font-weight: bold; font-size: 16px; margin-top: 25px; width: 80%; }
+        #toast { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 3000; display: none; text-align: center; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div id="toast">SCANNING...</div>
+<div id="toast">AI VERIFYING...</div>
 
 <div id="sensor-auth">
-    <h2 style="color: #00ff00; letter-spacing: 2px;">CAMOPRO AI</h2>
-    <p style="font-size: 15px; color: #aaa; line-height: 1.5;">Smart Detection Enabled.<br>Align boxes to capture your outlet.</p>
-    <button id="auth-btn">START CAMERA</button>
+    <h2 style="color: #00ff00;">SMART VISION ACTIVE</h2>
+    <p style="font-size: 14px; color: #ccc;">Align guides over the outlet.<br>Empty surfaces will be ignored.</p>
+    <button id="auth-btn">ENABLE AI CAMERA</button>
 </div>
 
 <div id="camera-container">
-    <div class="header"><span style="font-weight: 900; color: #00ff00; letter-spacing: 1px;">TEXTURE ANALYZER</span></div>
+    <div class="header">
+        <span style="font-weight: 800; color: #00ff00;">CAMOPRO SMART SCAN</span>
+    </div>
     <div id="thumbnail-bar"></div>
     <div id="viewport">
-        <div id="status-msg">FINDING LEVEL...</div>
+        <div id="status-msg">AIM AT OUTLET</div>
         <video id="video" autoplay playsinline muted></video>
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
     <div class="footer">
-        <button id="finish-btn">COMPLETE ORDER</button>
+        <button id="finish-btn">PROCEED TO ORDER</button>
     </div>
 </div>
 
@@ -65,7 +67,6 @@
     let capturedPhotos = [];
     let isLocked = false;
     let hasLeftZone = true;
-    let greenStartTime = null;
 
     function playShutter() {
         try {
@@ -73,16 +74,18 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine'; gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-            osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
             osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         } catch(e) {}
     }
 
     async function initCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1280 } } 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 1280 } }
             });
             video.srcObject = stream;
             video.onloadedmetadata = () => {
@@ -90,80 +93,74 @@
                 document.getElementById('sensor-auth').style.display = 'none';
                 camContainer.style.visibility = 'visible';
             };
-        } catch (err) { alert("Please allow camera access."); }
+        } catch (err) { alert("Camera Error"); }
     }
 
     function handleOrientation(event) {
         if (isLocked) return;
-
-        let beta = event.beta;
-        let gamma = event.gamma;
-        let targetB = 0;
-        let mode = "FLOOR";
-
-        if (Math.abs(beta - 90) < 45) { targetB = 90; mode = "WALL"; }
-        else if (Math.abs(beta) < 45) { targetB = 0; mode = "FLOOR"; }
-        else { targetB = beta > 0 ? 180 : -180; mode = "CEILING"; }
-
-        const diffV = Math.abs(beta - targetB);
+        const beta = event.beta;
+        const gamma = event.gamma;
+        let targetBeta = (beta > 45 && beta < 135) ? 90 : (beta <= 45 && beta >= -45) ? 0 : 180;
+        
+        const diffV = Math.abs(beta - targetBeta);
         const diffL = Math.abs(gamma);
 
-        dynamicGuide.style.transform = `translate(${gamma * 4}px, ${(beta - targetB) * 4}px)`;
+        dynamicGuide.style.transform = `translate(${gamma * 5}px, ${(beta - targetBeta) * 5}px)`;
 
-        // Green Zone Logic
-        if (diffV < 6 && diffL < 6) {
+        if (diffV < 5 && diffL < 5) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
-                statusMsg.innerText = "ALIGNED! ANALYZING...";
+                statusMsg.innerText = "CHECKING FOR OBJECT...";
                 statusMsg.style.color = "#00ff00";
-                
-                if (!greenStartTime) greenStartTime = Date.now();
-                
-                // If it's green for more than 0.5s, try to capture
-                if (Date.now() - greenStartTime > 500) {
-                    validateAndCapture();
-                }
+                analyzeAndCapture();
             }
         } else {
             hasLeftZone = true;
-            greenStartTime = null;
             dynamicGuide.style.borderColor = "#ff4444";
-            statusMsg.innerText = `ALIGN FOR ${mode}`;
+            statusMsg.innerText = "ALIGN OVER OUTLET";
             statusMsg.style.color = "#ff4444";
         }
     }
 
-    function validateAndCapture() {
+    async function analyzeAndCapture() {
         isLocked = true;
+        
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = 150; canvas.height = 150;
+        canvas.width = 200; 
+        canvas.height = 200;
         
-        // Sample center of video
-        ctx.drawImage(video, (video.videoWidth/2)-75, (video.videoHeight/2)-75, 150, 150, 0, 0, 150, 150);
-        const imgData = ctx.getImageData(0, 0, 150, 150).data;
+        // Grab center sample
+        ctx.drawImage(video, (video.videoWidth/2)-100, (video.videoHeight/2)-100, 200, 200, 0, 0, 200, 200);
+        const imgData = ctx.getImageData(0, 0, 200, 200).data;
         
-        let diffSum = 0;
-        for(let i=4; i < imgData.length; i+=12) { // Faster sampling
-            diffSum += Math.abs(imgData[i] - imgData[i-4]);
+        // DETECTOR DE ENTROPÍA (Diferencia de píxeles)
+        let totalDiff = 0;
+        for (let i = 4; i < imgData.length; i += 8) {
+            totalDiff += Math.abs(imgData[i] - imgData[i-4]); 
         }
         
-        const entropy = diffSum / (imgData.length / 12);
+        const score = totalDiff / (imgData.length / 8);
 
-        // LOWERED THRESHOLD: 4 (previously 12). Much easier to trigger.
-        if (entropy < 4) {
-            statusMsg.innerText = "NO OUTLET DETECTED";
+        // Si la superficie es demasiado lisa (Pared vacía Score < 10)
+        if (score < 10) {
+            statusMsg.innerText = "WALL DETECTED - FIND OUTLET";
             statusMsg.style.color = "#ff4444";
-            setTimeout(() => { isLocked = false; greenStartTime = null; }, 1000);
+            dynamicGuide.style.borderColor = "#ff4444";
+            setTimeout(() => { isLocked = false; }, 600);
         } else {
-            executeCapture();
+            // Es un objeto (Outlet detectado)
+            executeFinalCapture();
         }
     }
 
-    function executeCapture() {
+    function executeFinalCapture() {
         hasLeftZone = false;
-        greenStartTime = null;
         playShutter();
         
+        toast.innerText = "OUTLET VALIDATED ✓";
+        toast.style.background = "#00ff00";
+        toast.style.display = 'block';
+
         const finalCtx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -172,11 +169,9 @@
         capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
         renderThumbnails();
         
-        toast.innerText = "OUTLET CAPTURED ✓";
-        toast.style.display = 'block';
-        setTimeout(() => { 
-            toast.style.display = 'none'; 
-            isLocked = false; 
+        setTimeout(() => {
+            toast.style.display = 'none';
+            isLocked = false;
         }, 1500);
     }
 
@@ -199,13 +194,11 @@
 
     authBtn.addEventListener('click', () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(s => { 
-                if(s==='granted') { window.addEventListener('deviceorientation', handleOrientation); initCamera(); } 
-            });
+            DeviceOrientationEvent.requestPermission().then(s => { if(s==='granted') { window.addEventListener('deviceorientation', handleOrientation); initCamera(); } });
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    finishBtn.addEventListener('click', () => alert("Proceeding to final order details..."));
+    finishBtn.addEventListener('click', () => alert("Proceeding..."));
 </script>
 </body>
 </html>
