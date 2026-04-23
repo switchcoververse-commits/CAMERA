@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro AI V23-Fixed</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>CamoPro AI V27 - Ultra Validation</title>
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
@@ -13,33 +11,37 @@
         #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 70px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
         .thumb-container { position: relative; min-width: 55px; height: 55px; }
         .thumb-img { width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1.5px solid #555; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; font-size: 10px; }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; font-size: 10px; cursor: pointer; }
         #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 15px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
         #fixed-guide { position: absolute; width: 110px; height: 150px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
         #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
         #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
-        .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; }
-        #finish-btn { background: #00ff00; color: #000; border: none; padding: 14px 35px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none; font-size: 13px; }
-        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
+        .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        #proceed-btn { background: #00ff00; color: #000; border: none; padding: 18px 45px; border-radius: 30px; font-weight: 800; cursor: pointer; display: none; }
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
         #auth-btn { background: #fff; color: #000; padding: 18px 45px; border-radius: 35px; border: none; font-weight: bold; font-size: 16px; margin-top: 25px; width: 80%; }
-        #toast { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 3000; display: none; text-align: center; font-size: 14px; }
+        #analysis-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .loader { border: 4px solid #333; border-top: 4px solid #00ff00; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="toast">AI VERIFYING...</div>
+<div id="analysis-overlay">
+    <div class="loader"></div>
+    <h2 id="analysis-step" style="color: #00ff00; font-size: 18px;">AI ANALYZING...</h2>
+    <p id="analysis-detail" style="color: #aaa; font-size: 14px;">Point 1: Checking Sharpness</p>
+</div>
 
 <div id="sensor-auth">
-    <h2 style="color: #00ff00;">SMART VISION ACTIVE</h2>
-    <p style="font-size: 14px; color: #ccc;">Align guides over the outlet.<br>Empty surfaces will be ignored.</p>
-    <button id="auth-btn">ENABLE AI CAMERA</button>
+    <h2 style="color: #00ff00;">SMART SCANNER V27</h2>
+    <p style="color: #ccc;">High-Precision validation active.</p>
+    <button id="auth-btn">ENABLE SYSTEM</button>
 </div>
 
 <div id="camera-container">
-    <div class="header">
-        <span style="font-weight: 800; color: #00ff00;">CAMOPRO SMART SCAN</span>
-    </div>
+    <div class="header"><span style="font-weight: 800; color: #00ff00;">AI VALIDATION MODE</span></div>
     <div id="thumbnail-bar"></div>
     <div id="viewport">
         <div id="status-msg">AIM AT OUTLET</div>
@@ -49,7 +51,7 @@
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
     <div class="footer">
-        <button id="finish-btn">PROCEED TO ORDER</button>
+        <button id="proceed-btn">PROCEED TO ORDER</button>
     </div>
 </div>
 
@@ -57,43 +59,41 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const thumbBar = document.getElementById('thumbnail-bar');
-    const finishBtn = document.getElementById('finish-btn');
+    const proceedBtn = document.getElementById('proceed-btn');
     const dynamicGuide = document.getElementById('dynamic-guide');
     const statusMsg = document.getElementById('status-msg');
     const authBtn = document.getElementById('auth-btn');
     const camContainer = document.getElementById('camera-container');
-    const toast = document.getElementById('toast');
+    const overlay = document.getElementById('analysis-overlay');
+    const stepTxt = document.getElementById('analysis-step');
+    const detailTxt = document.getElementById('analysis-detail');
     
     let capturedPhotos = [];
     let isLocked = false;
     let hasLeftZone = true;
 
     function playShutter() {
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-        } catch(e) {}
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
     async function initCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 1280 } }
-            });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } } });
             video.srcObject = stream;
             video.onloadedmetadata = () => {
                 video.play();
                 document.getElementById('sensor-auth').style.display = 'none';
                 camContainer.style.visibility = 'visible';
             };
-        } catch (err) { alert("Camera Error"); }
+        } catch (err) { alert("Camera Access Error"); }
     }
 
     function handleOrientation(event) {
@@ -104,75 +104,97 @@
         
         const diffV = Math.abs(beta - targetBeta);
         const diffL = Math.abs(gamma);
-
         dynamicGuide.style.transform = `translate(${gamma * 5}px, ${(beta - targetBeta) * 5}px)`;
 
-        if (diffV < 5 && diffL < 5) {
+        if (diffV < 4 && diffL < 4) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
-                statusMsg.innerText = "CHECKING FOR OBJECT...";
-                statusMsg.style.color = "#00ff00";
-                analyzeAndCapture();
+                statusMsg.innerText = "HOLD STEADY...";
+                startValidationFlow();
             }
         } else {
             hasLeftZone = true;
             dynamicGuide.style.borderColor = "#ff4444";
-            statusMsg.innerText = "ALIGN OVER OUTLET";
-            statusMsg.style.color = "#ff4444";
+            statusMsg.innerText = "AIM AT OUTLET";
         }
     }
 
-    async function analyzeAndCapture() {
+    async function startValidationFlow() {
         isLocked = true;
+        hasLeftZone = false;
+        overlay.style.display = 'flex';
         
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = 200; 
-        canvas.height = 200;
-        
-        // Grab center sample
-        ctx.drawImage(video, (video.videoWidth/2)-100, (video.videoHeight/2)-100, 200, 200, 0, 0, 200, 200);
-        const imgData = ctx.getImageData(0, 0, 200, 200).data;
-        
-        // DETECTOR DE ENTROPÍA (Diferencia de píxeles)
-        let totalDiff = 0;
-        for (let i = 4; i < imgData.length; i += 8) {
-            totalDiff += Math.abs(imgData[i] - imgData[i-4]); 
-        }
-        
-        const score = totalDiff / (imgData.length / 8);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        // Si la superficie es demasiado lisa (Pared vacía Score < 10)
-        if (score < 10) {
-            statusMsg.innerText = "WALL DETECTED - FIND OUTLET";
-            statusMsg.style.color = "#ff4444";
-            dynamicGuide.style.borderColor = "#ff4444";
-            setTimeout(() => { isLocked = false; }, 600);
-        } else {
-            // Es un objeto (Outlet detectado)
-            executeFinalCapture();
+        try {
+            // 1. SHARPNESS (Nitidez)
+            stepTxt.innerText = "CHECKING SHARPNESS...";
+            await new Promise(r => setTimeout(r, 600));
+            if (!checkSharpness(imageData)) throw "IMAGE BLURRY - HOLD STEADY";
+
+            // 2. LIGHTING (Iluminación)
+            stepTxt.innerText = "CHECKING LIGHTING...";
+            await new Promise(r => setTimeout(r, 600));
+            if (!checkLighting(imageData)) throw "POOR LIGHTING OR GLARE DETECTED";
+
+            // 3. DETECTION (Presencia de Outlet)
+            stepTxt.innerText = "SEARCHING FOR OUTLET...";
+            await new Promise(r => setTimeout(r, 600));
+            if (!checkDetection(imageData)) throw "NO OUTLET DETECTED IN FRAME";
+
+            // 4. PERSPECTIVE (Confirmada por giroscopio + análisis centro)
+            stepTxt.innerText = "VERIFYING PERSPECTIVE...";
+            await new Promise(r => setTimeout(r, 600));
+            
+            // SUCCESS
+            playShutter();
+            capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
+            renderThumbnails();
+            overlay.style.display = 'none';
+            isLocked = false;
+
+        } catch (error) {
+            stepTxt.innerText = "REJECTED";
+            stepTxt.style.color = "#ff4444";
+            detailTxt.innerText = error;
+            await new Promise(r => setTimeout(r, 2000));
+            overlay.style.display = 'none';
+            stepTxt.style.color = "#00ff00";
+            isLocked = false;
         }
     }
 
-    function executeFinalCapture() {
-        hasLeftZone = false;
-        playShutter();
-        
-        toast.innerText = "OUTLET VALIDATED ✓";
-        toast.style.background = "#00ff00";
-        toast.style.display = 'block';
+    function checkSharpness(img) {
+        let diff = 0;
+        const data = img.data;
+        for (let i = 0; i < data.length; i += 40) {
+            diff += Math.abs(data[i] - data[i + 4]);
+        }
+        return (diff / (data.length / 40)) > 5; 
+    }
 
-        const finalCtx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        finalCtx.drawImage(video, 0, 0);
-        
-        capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
-        renderThumbnails();
-        
-        setTimeout(() => {
-            toast.style.display = 'none';
-            isLocked = false;
-        }, 1500);
+    function checkLighting(img) {
+        let total = 0;
+        const data = img.data;
+        for (let i = 0; i < data.length; i += 20) {
+            total += (data[i] + data[i+1] + data[i+2]) / 3;
+        }
+        const avg = total / (data.length / 20);
+        return avg > 40 && avg < 220; // Ni muy oscuro ni quemado
+    }
+
+    function checkDetection(img) {
+        // Buscamos cambios bruscos de contraste en el centro (típico de un outlet)
+        const centerStart = (img.width * img.height / 2) * 4;
+        let contrast = 0;
+        for (let i = centerStart; i < centerStart + 4000; i += 4) {
+            contrast += Math.abs(img.data[i] - img.data[i-4]);
+        }
+        return contrast > 500;
     }
 
     function renderThumbnails() {
@@ -183,8 +205,7 @@
             div.innerHTML = `<img src="${p.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>`;
             thumbBar.appendChild(div);
         });
-        finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
-        thumbBar.scrollLeft = thumbBar.scrollWidth;
+        proceedBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
     }
 
     window.removePhoto = (id) => {
@@ -198,7 +219,7 @@
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    finishBtn.addEventListener('click', () => alert("Proceeding..."));
+    proceedBtn.addEventListener('click', () => alert("Proceeding to Order Form..."));
 </script>
 </body>
 </html>
