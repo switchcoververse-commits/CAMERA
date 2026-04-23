@@ -3,28 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro AI V25</title>
+    <title>CamoPro AI V26</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; overflow: hidden; color: #fff; }
         #camera-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; visibility: hidden; }
-        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.8); text-align: center; border-bottom: 1px solid #222; }
-        #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 75px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
+        .header { padding: 15px; z-index: 10; background: rgba(0,0,0,0.85); text-align: center; border-bottom: 1px solid #333; }
+        #thumbnail-bar { background: rgba(25, 25, 25, 0.7); margin: 5px 15px; border-radius: 12px; height: 75px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #444; }
         .thumb-container { position: relative; min-width: 60px; height: 60px; }
-        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #444; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: bold; cursor: pointer; }
-        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #111; border: 2px solid #222; }
+        .thumb-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #555; }
+        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: bold; cursor: pointer; z-index: 20; }
+        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #333; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        #fixed-guide { position: absolute; width: 120px; height: 160px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; z-index: 5; }
-        #dynamic-guide { position: absolute; width: 120px; height: 160px; border: 4px solid #ff4444; border-radius: 10px; z-index: 6; transition: border-color 0.2s, transform 0.1s ease-out; }
-        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        #fixed-guide { position: absolute; width: 130px; height: 170px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; z-index: 5; }
+        #dynamic-guide { position: absolute; width: 130px; height: 170px; border: 4px solid #ff4444; border-radius: 10px; z-index: 6; transition: border-color 0.2s, transform 0.1s ease-out; }
+        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; text-align: center; }
         .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; }
-        #finish-btn { background: #00ff00; color: #000; border: none; padding: 15px 40px; border-radius: 30px; font-weight: 800; cursor: pointer; display: none; text-transform: uppercase; }
-        #force-capture { background: rgba(255,255,255,0.2); border: 1px solid #fff; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 10px; display: none; cursor: pointer; }
-        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
-        #auth-btn { background: #fff; color: #000; padding: 20px 50px; border-radius: 40px; border: none; font-weight: 900; font-size: 18px; margin-top: 30px; width: 85%; letter-spacing: 1px; }
-        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 20px 30px; border-radius: 15px; font-weight: bold; z-index: 3000; display: none; text-align: center; }
+        #finish-btn { background: #00ff00; color: #000; border: none; padding: 15px 45px; border-radius: 30px; font-weight: 900; cursor: pointer; display: none; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,255,0,0.3); }
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
+        #auth-btn { background: #fff; color: #000; padding: 20px 60px; border-radius: 40px; border: none; font-weight: 900; font-size: 18px; margin-top: 30px; width: 100%; max-width: 300px; }
+        #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: #000; padding: 20px 35px; border-radius: 15px; font-weight: bold; z-index: 3000; display: none; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
@@ -32,23 +31,22 @@
 <div id="toast">SCANNING...</div>
 
 <div id="sensor-auth">
-    <h2 style="color: #00ff00; letter-spacing: 2px;">CAMOPRO V25</h2>
-    <p style="font-size: 15px; color: #aaa; line-height: 1.5;">Smart sensors will detect your outlet.<br>Align the boxes to shoot.</p>
-    <button id="auth-btn">START SCANNER</button>
+    <h2 style="color: #00ff00; letter-spacing: 2px;">CAMOPRO AI</h2>
+    <p style="font-size: 15px; color: #aaa; line-height: 1.5;">Smart Detection Enabled.<br>Align boxes to capture your outlet.</p>
+    <button id="auth-btn">START CAMERA</button>
 </div>
 
 <div id="camera-container">
-    <div class="header"><span style="font-weight: 900; color: #00ff00; letter-spacing: 1px;">PRO TEXTURE SCAN</span></div>
+    <div class="header"><span style="font-weight: 900; color: #00ff00; letter-spacing: 1px;">TEXTURE ANALYZER</span></div>
     <div id="thumbnail-bar"></div>
     <div id="viewport">
-        <div id="status-msg">INITIALIZING SENSORS...</div>
+        <div id="status-msg">FINDING LEVEL...</div>
         <video id="video" autoplay playsinline muted></video>
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
     <div class="footer">
-        <button id="force-capture">SENSORS UNSTABLE? TAP TO FORCE</button>
         <button id="finish-btn">COMPLETE ORDER</button>
     </div>
 </div>
@@ -58,7 +56,6 @@
     const canvas = document.getElementById('canvas');
     const thumbBar = document.getElementById('thumbnail-bar');
     const finishBtn = document.getElementById('finish-btn');
-    const forceBtn = document.getElementById('force-capture');
     const dynamicGuide = document.getElementById('dynamic-guide');
     const statusMsg = document.getElementById('status-msg');
     const authBtn = document.getElementById('auth-btn');
@@ -68,6 +65,7 @@
     let capturedPhotos = [];
     let isLocked = false;
     let hasLeftZone = true;
+    let greenStartTime = null;
 
     function playShutter() {
         try {
@@ -75,84 +73,95 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine'; gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            osc.type = 'sine'; gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(900, audioCtx.currentTime);
             osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         } catch(e) {}
     }
 
     async function initCamera() {
         try {
-            const constraints = { video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } };
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: { ideal: 1280 } } 
+            });
             video.srcObject = stream;
             video.onloadedmetadata = () => {
                 video.play();
                 document.getElementById('sensor-auth').style.display = 'none';
                 camContainer.style.visibility = 'visible';
             };
-        } catch (err) { alert("Enable camera in settings."); }
+        } catch (err) { alert("Please allow camera access."); }
     }
 
     function handleOrientation(event) {
         if (isLocked) return;
 
-        // Use absolute values to avoid negative flip issues
         let beta = event.beta;
         let gamma = event.gamma;
-        
         let targetB = 0;
         let mode = "FLOOR";
 
-        if (Math.abs(beta - 90) < 40) { targetB = 90; mode = "WALL"; }
-        else if (Math.abs(beta) < 40) { targetB = 0; mode = "FLOOR"; }
-        else if (Math.abs(beta + 90) < 40 || Math.abs(beta - 180) < 40) { targetB = beta > 0 ? 180 : -180; mode = "CEILING"; }
+        if (Math.abs(beta - 90) < 45) { targetB = 90; mode = "WALL"; }
+        else if (Math.abs(beta) < 45) { targetB = 0; mode = "FLOOR"; }
+        else { targetB = beta > 0 ? 180 : -180; mode = "CEILING"; }
 
         const diffV = Math.abs(beta - targetB);
         const diffL = Math.abs(gamma);
 
-        // Visual feedback
         dynamicGuide.style.transform = `translate(${gamma * 4}px, ${(beta - targetB) * 4}px)`;
 
-        // INCREASED TOLERANCE TO 6 DEGREES
+        // Green Zone Logic
         if (diffV < 6 && diffL < 6) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
                 statusMsg.innerText = "ALIGNED! ANALYZING...";
                 statusMsg.style.color = "#00ff00";
-                validateAndCapture();
+                
+                if (!greenStartTime) greenStartTime = Date.now();
+                
+                // If it's green for more than 0.5s, try to capture
+                if (Date.now() - greenStartTime > 500) {
+                    validateAndCapture();
+                }
             }
         } else {
             hasLeftZone = true;
+            greenStartTime = null;
             dynamicGuide.style.borderColor = "#ff4444";
             statusMsg.innerText = `ALIGN FOR ${mode}`;
             statusMsg.style.color = "#ff4444";
-            if (diffV < 15 && diffL < 15) forceBtn.style.display = 'block';
-            else forceBtn.style.display = 'none';
         }
     }
 
-    async function validateAndCapture() {
+    function validateAndCapture() {
         isLocked = true;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = 200; canvas.height = 200;
-        ctx.drawImage(video, (video.videoWidth/2)-100, (video.videoHeight/2)-100, 200, 200, 0, 0, 200, 200);
+        canvas.width = 150; canvas.height = 150;
         
-        const data = ctx.getImageData(0, 0, 200, 200).data;
-        let variance = 0;
-        for(let i=4; i<data.length; i+=8) { variance += Math.abs(data[i] - data[i-4]); }
+        // Sample center of video
+        ctx.drawImage(video, (video.videoWidth/2)-75, (video.videoHeight/2)-75, 150, 150, 0, 0, 150, 150);
+        const imgData = ctx.getImageData(0, 0, 150, 150).data;
         
-        // Lowered entropy threshold for dark marble
-        if (variance / (data.length/8) < 8) {
+        let diffSum = 0;
+        for(let i=4; i < imgData.length; i+=12) { // Faster sampling
+            diffSum += Math.abs(imgData[i] - imgData[i-4]);
+        }
+        
+        const entropy = diffSum / (imgData.length / 12);
+
+        // LOWERED THRESHOLD: 4 (previously 12). Much easier to trigger.
+        if (entropy < 4) {
             statusMsg.innerText = "NO OUTLET DETECTED";
-            setTimeout(() => { isLocked = false; }, 800);
+            statusMsg.style.color = "#ff4444";
+            setTimeout(() => { isLocked = false; greenStartTime = null; }, 1000);
         } else {
-            executeFinalCapture();
+            executeCapture();
         }
     }
 
-    function executeFinalCapture() {
+    function executeCapture() {
         hasLeftZone = false;
+        greenStartTime = null;
         playShutter();
         
         const finalCtx = canvas.getContext('2d');
@@ -163,9 +172,12 @@
         capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
         renderThumbnails();
         
-        toast.innerText = "CAPTURED ✓";
+        toast.innerText = "OUTLET CAPTURED ✓";
         toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; isLocked = false; }, 1200);
+        setTimeout(() => { 
+            toast.style.display = 'none'; 
+            isLocked = false; 
+        }, 1500);
     }
 
     function renderThumbnails() {
@@ -177,14 +189,13 @@
             thumbBar.appendChild(div);
         });
         finishBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
+        thumbBar.scrollLeft = thumbBar.scrollWidth;
     }
 
     window.removePhoto = (id) => {
         capturedPhotos = capturedPhotos.filter(p => p.id !== id);
         renderThumbnails();
     };
-
-    forceBtn.addEventListener('click', executeFinalCapture);
 
     authBtn.addEventListener('click', () => {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -194,7 +205,7 @@
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    finishBtn.addEventListener('click', () => alert("Processing images..."));
+    finishBtn.addEventListener('click', () => alert("Proceeding to final order details..."));
 </script>
 </body>
 </html>
