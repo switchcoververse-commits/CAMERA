@@ -3,99 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro - Checkout Flow</title>
+    <title>CamoPro AI V28 - Full Auto</title>
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; color: #fff; overflow-x: hidden; }
         
-        /* Contenedores Principales */
-        #camera-view { display: flex; flex-direction: column; height: 100vh; }
-        #order-view { display: none; min-height: 100vh; background: #111; padding: 25px; box-sizing: border-box; }
+        /* Contenedores de Flujo */
+        #camera-view, #gallery-view, #order-view { display: none; min-height: 100vh; width: 100vw; }
+        #camera-view { display: flex; flex-direction: column; }
 
-        /* UI de Cámara (V23) */
-        .header { padding: 15px; text-align: center; border-bottom: 1px solid #222; background: #000; }
-        #thumbnail-bar { background: rgba(20, 20, 20, 0.6); margin: 5px 15px; border-radius: 12px; height: 70px; display: flex; align-items: center; padding: 5px; overflow-x: auto; gap: 8px; border: 1px solid #333; }
-        .thumb-container { position: relative; min-width: 55px; height: 55px; }
-        .thumb-img { width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1.5px solid #555; }
-        .remove-thumb { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; font-size: 10px; cursor: pointer; }
-        #viewport { position: relative; flex-grow: 1; margin: 10px 15px; overflow: hidden; border-radius: 15px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
+        /* Cámara (V23 base) */
+        #viewport { position: relative; flex-grow: 1; margin: 10px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-        #fixed-guide { position: absolute; width: 110px; height: 150px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
-        #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; }
-        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
+        #fixed-guide { position: absolute; width: 120px; height: 160px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 10px; }
+        #dynamic-guide { position: absolute; width: 120px; height: 160px; border: 3px solid #ff4444; border-radius: 10px; transition: border-color 0.2s; }
+        
+        /* Galería de Validación */
+        .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .gallery-item { position: relative; border-radius: 10px; overflow: hidden; border: 2px solid #333; }
+        .gallery-item.selected { border-color: #00ff00; }
+        .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+        .check-badge { position: absolute; top: 10px; right: 10px; background: #00ff00; color: #000; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
-        /* Formulario y Checkout */
-        .section-title { color: #00ff00; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: block; }
-        .form-group { margin-bottom: 15px; }
+        /* Formulario */
+        .form-container { padding: 25px; }
+        .form-group { margin-bottom: 20px; }
         label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
         input { width: 100%; padding: 15px; background: #222; border: 1px solid #333; border-radius: 10px; color: #fff; font-size: 16px; box-sizing: border-box; }
-        input:focus { border-color: #00ff00; outline: none; }
         
-        .summary-card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 25px; }
-        .summary-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-        .total-row { border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 18px; color: #00ff00; }
-
         /* Botones */
-        .btn-main { background: #00ff00; color: #000; border: none; padding: 18px; border-radius: 30px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; font-size: 14px; }
-        .btn-secondary { background: transparent; color: #888; border: none; padding: 10px; width: 100%; cursor: pointer; font-size: 12px; margin-top: 10px; }
-
-        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
+        .footer-action { padding: 20px; background: #000; border-top: 1px solid #222; text-align: center; }
+        .btn-main { background: #00ff00; color: #000; border: none; padding: 18px 0; width: 100%; border-radius: 35px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+        
+        #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
     </style>
 </head>
 <body>
 
 <div id="sensor-auth">
-    <h2 style="color: #00ff00;">CAMOPRO V23</h2>
-    <p>Enable sensors to start scanning.</p>
-    <button class="btn-main" id="start-btn">ENABLE SYSTEM</button>
+    <h1 style="color: #00ff00; letter-spacing: 2px;">CAMOPRO AI</h1>
+    <button class="btn-main" id="start-btn" style="max-width: 250px;">INITIALIZE SCANNER</button>
 </div>
 
 <div id="camera-view">
-    <div class="header"><span style="font-weight: 800; color: #00ff00;">SCAN OUTLET</span></div>
-    <div id="thumbnail-bar"></div>
     <div id="viewport">
-        <div id="status-msg">AIM AT OUTLET</div>
         <video id="video" autoplay playsinline muted></video>
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
     </div>
-    <div style="padding: 20px; text-align: center;">
-        <button id="next-step-btn" class="btn-main" style="display: none;">CONTINUE TO CHECKOUT</button>
+    <div class="footer-action">
+        <div id="capture-count" style="margin-bottom: 10px; font-size: 12px; color: #00ff00;">0 PHOTOS CAPTURED</div>
+        <button id="go-to-gallery" class="btn-main" style="display: none;">REVIEW PHOTOS</button>
+    </div>
+</div>
+
+<div id="gallery-view">
+    <div style="padding: 25px 25px 0 25px;">
+        <h2 style="color: #00ff00; margin: 0;">VALIDATE PHOTOS</h2>
+        <p style="color: #888; font-size: 14px;">Tap to deselect photos you don't want to print.</p>
+    </div>
+    <div class="gallery-grid" id="gallery-grid"></div>
+    <div class="footer-action">
+        <button id="go-to-form" class="btn-main">CONTINUE TO SHIPPING</button>
     </div>
 </div>
 
 <div id="order-view">
-    <span class="section-title">Shipping Details</span>
-    <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="name" placeholder="John Doe">
-    </div>
-    <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="email" placeholder="john@example.com">
-    </div>
-    <div class="form-group">
-        <label>Full Address</label>
-        <input type="text" id="address" placeholder="123 Street, City, ZIP">
-    </div>
-
-    <span class="section-title">Order Summary</span>
-    <div class="summary-card">
-        <div class="summary-item">
-            <span>Captured Units:</span>
-            <span id="sum-count">0</span>
-        </div>
-        <div class="summary-item">
-            <span>Price per unit:</span>
-            <span>$45.00</span>
-        </div>
-        <div class="total-row summary-item">
-            <span>TOTAL:</span>
-            <span id="sum-total">$0.00</span>
+    <div class="form-container">
+        <h2 style="color: #00ff00;">SHIPPING</h2>
+        <div class="form-group"><label>Full Name</label><input type="text" id="name"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="email"></div>
+        <div class="form-group"><label>Shipping Address</label><input type="text" id="address"></div>
+        
+        <div style="background: #111; padding: 20px; border-radius: 15px; margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Total Items:</span><span id="final-count" style="color:#00ff00; font-weight:800;">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 20px; font-weight: 900;">
+                <span>TOTAL:</span><span id="final-price" style="color:#00ff00;">$0.00</span>
+            </div>
         </div>
     </div>
-
-    <button class="btn-main" id="pay-now-btn">PAY WITH STRIPE / CARD</button>
-    <button class="btn-secondary" onclick="location.reload()">Return to Scanner</button>
+    <div class="footer-action">
+        <button class="btn-main" id="final-pay-btn">PAY & FINISH</button>
+    </div>
 </div>
 
 <canvas id="canvas" style="display:none;"></canvas>
@@ -103,89 +93,85 @@
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const thumbBar = document.getElementById('thumbnail-bar');
-    const nextStepBtn = document.getElementById('next-step-btn');
     const dynamicGuide = document.getElementById('dynamic-guide');
-    const statusMsg = document.getElementById('status-msg');
-    
     let capturedPhotos = [];
     let isLocked = false;
     let hasLeftZone = true;
-    const UNIT_PRICE = 45.0;
 
-    // --- Lógica de Cámara V23 ---
+    // --- CAMERA LOGIC ---
     async function initCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            video.srcObject = stream;
-            document.getElementById('sensor-auth').style.display = 'none';
-        } catch (err) { alert("Camera error"); }
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        document.getElementById('sensor-auth').style.display = 'none';
+        document.getElementById('camera-view').style.display = 'flex';
     }
 
     function handleOrientation(event) {
         if (isLocked) return;
         const beta = event.beta;
         const gamma = event.gamma;
-        let targetBeta = (beta > 45 && beta < 135) ? 90 : (beta <= 45 && beta >= -45) ? 0 : 180;
+        let targetB = (beta > 45 && beta < 135) ? 90 : (beta <= 45 && beta >= -45) ? 0 : 180;
         
-        const diffV = Math.abs(beta - targetBeta);
-        const diffL = Math.abs(gamma);
-        dynamicGuide.style.transform = `translate(${gamma * 5}px, ${(beta - targetBeta) * 5}px)`;
+        const dV = Math.abs(beta - targetB);
+        const dL = Math.abs(gamma);
+        dynamicGuide.style.transform = `translate(${gamma * 5}px, ${(beta - targetB) * 5}px)`;
 
-        if (diffV < 4 && diffL < 4) {
+        if (dV < 4 && dL < 4) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
-                statusMsg.innerText = "ALIGNED ✓";
-                capturePhoto();
+                capture();
             }
         } else {
             hasLeftZone = true;
             dynamicGuide.style.borderColor = "#ff4444";
-            statusMsg.innerText = "AIM AT OUTLET";
         }
     }
 
-    function capturePhoto() {
+    function capture() {
         isLocked = true;
         hasLeftZone = false;
-        
-        const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+        canvas.getContext('2d').drawImage(video, 0, 0);
         
-        capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
-        renderThumbs();
+        capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.7), selected: true });
+        
+        document.getElementById('capture-count').innerText = `${capturedPhotos.length} PHOTOS CAPTURED`;
+        document.getElementById('go-to-gallery').style.display = 'block';
         setTimeout(() => { isLocked = false; }, 1000);
     }
 
-    function renderThumbs() {
-        thumbBar.innerHTML = '';
+    // --- NAVIGATION & GALLERY ---
+    document.getElementById('go-to-gallery').addEventListener('click', () => {
+        document.getElementById('camera-view').style.display = 'none';
+        document.getElementById('gallery-view').style.display = 'block';
+        renderGallery();
+    });
+
+    function renderGallery() {
+        const grid = document.getElementById('gallery-grid');
+        grid.innerHTML = '';
         capturedPhotos.forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'thumb-container';
-            div.innerHTML = `<img src="${p.data}" class="thumb-img"><button class="remove-thumb" onclick="removePhoto(${p.id})">×</button>`;
-            thumbBar.appendChild(div);
+            const item = document.createElement('div');
+            item.className = `gallery-item ${p.selected ? 'selected' : ''}`;
+            item.innerHTML = `<img src="${p.data}">${p.selected ? '<div class="check-badge">✓</div>' : ''}`;
+            item.onclick = () => {
+                p.selected = !p.selected;
+                renderGallery();
+            };
+            grid.appendChild(item);
         });
-        nextStepBtn.style.display = capturedPhotos.length > 0 ? 'block' : 'none';
     }
 
-    window.removePhoto = (id) => {
-        capturedPhotos = capturedPhotos.filter(p => p.id !== id);
-        renderThumbs();
-    };
-
-    // --- Navegación al Checkout ---
-    nextStepBtn.addEventListener('click', () => {
-        // Detener cámara para ahorrar recursos
-        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+    document.getElementById('go-to-form').addEventListener('click', () => {
+        const finalOnes = capturedPhotos.filter(p => p.selected);
+        if(finalOnes.length === 0) return alert("Select at least one photo");
         
-        document.getElementById('camera-view').style.display = 'none';
+        document.getElementById('gallery-view').style.display = 'none';
         document.getElementById('order-view').style.display = 'block';
         
-        // Actualizar Resumen
-        document.getElementById('sum-count').innerText = capturedPhotos.length;
-        document.getElementById('sum-total').innerText = `$${(capturedPhotos.length * UNIT_PRICE).toFixed(2)}`;
+        document.getElementById('final-count').innerText = finalOnes.length;
+        document.getElementById('final-price').innerText = `$${(finalOnes.length * 45).toFixed(2)}`;
     });
 
     document.getElementById('start-btn').addEventListener('click', () => {
@@ -196,10 +182,9 @@
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    document.getElementById('pay-now-btn').addEventListener('click', () => {
-        const name = document.getElementById('name').value;
-        if (!name) return alert("Please enter your name");
-        alert("Connecting to Payment Gateway...");
+    document.getElementById('final-pay-btn').addEventListener('click', () => {
+        alert("Automated Process: Sending Data & Redirecting to Stripe...");
+        // Aquí se dispara el fetch() a tu webhook de Make.com o Stripe API
     });
 </script>
 </body>
