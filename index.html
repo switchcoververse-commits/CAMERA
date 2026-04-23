@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CamoPro AI V23 - Smart Vision</title>
+    <title>CamoPro AI V24</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
@@ -18,7 +18,7 @@
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
         #fixed-guide { position: absolute; width: 110px; height: 150px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; z-index: 5; }
         #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
-        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
+        #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; text-align: center; min-width: 160px; }
         .footer { padding-bottom: 25px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10; }
         #finish-btn { background: #00ff00; color: #000; border: none; padding: 14px 35px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none; font-size: 13px; }
         #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; }
@@ -28,29 +28,25 @@
 </head>
 <body>
 
-<div id="toast">VISION SCANNING...</div>
+<div id="toast">SCANNING...</div>
 
 <div id="sensor-auth">
-    <h2 style="color: #00ff00;">SMART VISION ACTIVE</h2>
-    <p style="font-size: 14px; color: #ccc;">Align guides over the outlet.<br>The AI will verify framing and perspective.</p>
-    <button id="auth-btn">ENABLE AI CAMERA</button>
+    <h2 style="color: #00ff00;">SMART OBJECT DETECTOR</h2>
+    <p style="font-size: 14px; color: #ccc;">Align guides over the actual outlet.<br>The system will ignore empty surfaces.</p>
+    <button id="auth-btn">ACTIVATE SCANNER</button>
 </div>
 
 <div id="camera-container">
-    <div class="header">
-        <span style="font-weight: 800; color: #00ff00;">CAMOPRO SMART SCAN</span>
-    </div>
+    <div class="header"><span style="font-weight: 800; color: #00ff00;">CAMOPRO V24</span></div>
     <div id="thumbnail-bar"></div>
     <div id="viewport">
-        <div id="status-msg">AIM AT OUTLET</div>
+        <div id="status-msg">CENTER OUTLET</div>
         <video id="video" autoplay playsinline muted></video>
         <div id="fixed-guide"></div>
         <div id="dynamic-guide"></div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
-    <div class="footer">
-        <button id="finish-btn">PROCEED TO ORDER</button>
-    </div>
+    <div class="footer"><button id="finish-btn">FINISH & PAY</button></div>
 </div>
 
 <script>
@@ -75,15 +71,15 @@
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.type = 'sine';
         gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
     async function initCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
             });
             video.srcObject = stream;
             video.onloadedmetadata = () => {
@@ -108,9 +104,9 @@
         if (diffV < 4 && diffL < 4) {
             if (hasLeftZone) {
                 dynamicGuide.style.borderColor = "#00ff00";
-                statusMsg.innerText = "OUTLET DETECTED - HOLD";
+                statusMsg.innerText = "CHECKING OBJECT...";
                 statusMsg.style.color = "#00ff00";
-                analyzeAndCapture();
+                validateScene();
             }
         } else {
             hasLeftZone = true;
@@ -120,45 +116,55 @@
         }
     }
 
-    async function analyzeAndCapture() {
+    function validateScene() {
         isLocked = true;
-        hasLeftZone = false;
-        
-        toast.innerText = "AI VERIFYING PERSPECTIVA...";
-        toast.style.background = "#fff";
-        toast.style.display = 'block';
-
         const ctx = canvas.getContext('2d');
+        canvas.width = 300; // Small sample for speed
+        canvas.height = 300;
+        ctx.drawImage(video, (video.videoWidth/2)-150, (video.videoHeight/2)-150, 300, 300, 0, 0, 300, 300);
+        
+        const imgData = ctx.getImageData(0, 0, 300, 300).data;
+        let diffs = 0;
+        for (let i = 4; i < imgData.length; i += 4) {
+            // Check brightness difference between adjacent pixels
+            diffs += Math.abs(imgData[i] - imgData[i-4]); 
+        }
+        
+        const entropy = diffs / (imgData.length / 4);
+
+        // Entropy threshold: If too low, it's a flat wall. 
+        // A wall is usually < 5. An outlet/object is usually > 15.
+        if (entropy < 12) {
+            statusMsg.innerText = "NO OBJECT DETECTED";
+            statusMsg.style.color = "#ff4444";
+            dynamicGuide.style.borderColor = "#ff4444";
+            setTimeout(() => { isLocked = false; }, 500);
+        } else {
+            processCapture();
+        }
+    }
+
+    function processCapture() {
+        hasLeftZone = false;
+        toast.innerText = "QUALITY VERIFIED ✓";
+        toast.style.background = "#00ff00";
+        toast.style.display = 'block';
+        
+        playShutter();
+        
+        // Full resolution capture
+        const finalCtx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+        finalCtx.drawImage(video, 0, 0);
         
-        // --- SMART VALIDATION LOGIC ---
+        capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.8) });
+        renderThumbnails();
+        
         setTimeout(() => {
-            // Analizamos el centro de la imagen para detectar "masa" (Outlet)
-            const frameData = ctx.getImageData(canvas.width/2 - 50, canvas.height/2 - 50, 100, 100);
-            let totalLuma = 0;
-            for(let i=0; i<frameData.data.length; i+=4) {
-                totalLuma += (frameData.data[i] + frameData.data[i+1] + frameData.data[i+2]) / 3;
-            }
-            const avgLuma = totalLuma / (frameData.data.length / 4);
-
-            // Simulación: Si la luz es muy uniforme (pared vacía), rechaza.
-            const isUniform = Math.random() < 0.1; // Simulación de error de detección
-
-            if (isUniform) {
-                toast.innerText = "NO OUTLET FOUND IN FRAME";
-                toast.style.background = "#ff4444";
-                setTimeout(() => { toast.style.display = 'none'; isLocked = false; }, 2000);
-            } else {
-                playShutter();
-                toast.innerText = "CENTERED & STRAIGHT ✓";
-                toast.style.background = "#00ff00";
-                capturedPhotos.push({ id: Date.now(), data: canvas.toDataURL('image/jpeg', 0.9) });
-                renderThumbnails();
-                setTimeout(() => { toast.style.display = 'none'; isLocked = false; }, 1200);
-            }
-        }, 1000);
+            toast.style.display = 'none';
+            isLocked = false;
+        }, 1500);
     }
 
     function renderThumbnails() {
@@ -184,7 +190,7 @@
         } else { window.addEventListener('deviceorientation', handleOrientation); initCamera(); }
     });
 
-    finishBtn.addEventListener('click', () => alert("Proceeding to Order Details..."));
+    finishBtn.addEventListener('click', () => alert("Proceeding to Order Form..."));
 </script>
 </body>
 </html>
