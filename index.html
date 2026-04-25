@@ -8,14 +8,11 @@
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, sans-serif; color: #fff; overflow-x: hidden; }
         
-        /* Contenedores de Flujo */
         #camera-view, #gallery-view, #order-view { display: none; min-height: 100vh; width: 100vw; }
         #camera-view { display: flex; flex-direction: column; }
 
-        /* Pantalla de Inicio / Sensores */
         #sensor-auth { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
         
-        /* Cámara (Funcionalidad V23) */
         .header { padding: 15px; text-align: center; border-bottom: 1px solid #222; background: #000; }
         #viewport { position: relative; flex-grow: 1; margin: 10px; overflow: hidden; border-radius: 20px; display: flex; justify-content: center; align-items: center; background: #000; border: 2px solid #222; }
         video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
@@ -23,14 +20,12 @@
         #dynamic-guide { position: absolute; width: 110px; height: 150px; border: 3px solid #ff4444; border-radius: 8px; z-index: 6; transition: border-color 0.2s; }
         #status-msg { position: absolute; top: 15px; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 15px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; color: #ff4444; }
 
-        /* Galería de Validación */
         .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
         .gallery-item { position: relative; border-radius: 10px; overflow: hidden; border: 2px solid #333; transition: 0.3s; }
         .gallery-item.selected { border-color: #00ff00; transform: scale(1.02); }
         .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
         .check-badge { position: absolute; top: 10px; right: 10px; background: #00ff00; color: #000; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
 
-        /* Formulario de Pedido */
         .form-container { padding: 25px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
@@ -41,7 +36,6 @@
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .total-row { border-top: 1px solid #333; padding-top: 15px; margin-top: 10px; font-size: 22px; font-weight: 900; color: #00ff00; }
 
-        /* Botones Globales */
         .footer-action { padding: 20px; background: #000; border-top: 1px solid #222; text-align: center; }
         .btn-main { background: #00ff00; color: #000; border: none; padding: 18px 0; width: 100%; border-radius: 35px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-size: 14px; letter-spacing: 1px; }
         .btn-main:disabled { background: #333; color: #666; }
@@ -112,7 +106,7 @@
     const PRICE_UNIT = 45;
     const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/54xeiu9j4733vbvnfjm7lah2u4wkjm1r';
 
-    // --- LÓGICA DE CÁMARA (BASE V23) ---
+    // --- CÁMARA ---
     async function initCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -150,17 +144,21 @@
         }
     }
 
+    // --- CAPTURA CON COMPRESIÓN CORREGIDA ---
     function executeCapture() {
         isLocked = true;
         hasLeftZone = false;
         
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        // Redimensionar a máximo 800px para no superar límite de Make (5MB)
+        const MAX_WIDTH = 800;
+        const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+        canvas.width = video.videoWidth * scale;
+        canvas.height = video.videoHeight * scale;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         
         capturedPhotos.push({ 
             id: Date.now(), 
-            data: canvas.toDataURL('image/jpeg', 0.8), 
+            data: canvas.toDataURL('image/jpeg', 0.3), // Compresión alta para pasar el webhook
             selected: true 
         });
         
@@ -206,11 +204,11 @@
         document.getElementById('final-price').innerText = `$${(validPhotos.length * PRICE_UNIT).toFixed(2)}`;
     });
 
-    // --- ENVÍO AUTOMATIZADO (WEBHOOK & PAYLOAD) ---
+    // --- ENVÍO AL WEBHOOK (con imágenes comprimidas) ---
     document.getElementById('final-pay-btn').addEventListener('click', async () => {
-        const name = document.getElementById('cust-name').value;
-        const email = document.getElementById('cust-email').value;
-        const address = document.getElementById('cust-address').value;
+        const name = document.getElementById('cust-name').value.trim();
+        const email = document.getElementById('cust-email').value.trim();
+        const address = document.getElementById('cust-address').value.trim();
         const selectedImages = capturedPhotos.filter(p => p.selected);
 
         if (!name || !email || !address) return alert("Please fill all fields.");
@@ -219,37 +217,46 @@
         btn.innerText = "SYNCING TO PRODUCTION...";
         btn.disabled = true;
 
-        const payload = {
-            customer: { name, email, address },
-            order_info: {
-                total_items: selectedImages.length,
-                total_price: selectedImages.length * PRICE_UNIT,
-                timestamp: new Date().toISOString()
-            },
-            assets: selectedImages.map(img => ({
-                id: img.id,
-                base64: img.data.split(',')[1]
-            }))
-        };
-
+        // Enviar cada foto en una petición separada para evitar el límite de 5MB
         try {
-            const response = await fetch(MAKE_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            for (let i = 0; i < selectedImages.length; i++) {
+                const img = selectedImages[i];
+                const payload = {
+                    customer: { name, email, address },
+                    order_info: {
+                        total_items: selectedImages.length,
+                        total_price: selectedImages.length * PRICE_UNIT,
+                        timestamp: new Date().toISOString(),
+                        photo_index: i + 1,   // Foto #1, #2, etc.
+                        photo_total: selectedImages.length
+                    },
+                    asset: {
+                        id: img.id,
+                        base64: img.data.split(',')[1]
+                    }
+                };
 
-            if (response.ok) {
-                btn.innerText = "REDIRECTING TO PAYMENT...";
-                setTimeout(() => {
-                    // Aquí iría tu link de Stripe
-                    alert("Order sent to Make successfully!");
-                }, 1000);
-            } else { throw new Error(); }
+                const response = await fetch(MAKE_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`Photo ${i + 1} failed`);
+                
+                btn.innerText = `SENDING ${i + 1}/${selectedImages.length}...`;
+            }
+
+            btn.innerText = "REDIRECTING TO PAYMENT...";
+            setTimeout(() => {
+                alert("Order sent to production successfully!");
+                btn.innerText = "PAY & SEND TO PRODUCTION";
+                btn.disabled = false;
+            }, 1000);
 
         } catch (err) {
             console.error(err);
-            alert("Connection error. Data saved locally, trying again...");
+            alert("Connection error. Please try again.");
             btn.innerText = "PAY & SEND TO PRODUCTION";
             btn.disabled = false;
         }
